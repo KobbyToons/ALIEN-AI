@@ -47,6 +47,21 @@ export function useVoice({
   const finalTranscriptRef = useRef<string>("");
   const isListeningRef = useRef<boolean>(false);
   const hasDeliveredRef = useRef<boolean>(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackDeliveryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync callbacks to refs so event listeners always call the latest props without re-binding
+  const onTranscriptRef = useRef(onTranscript);
+  const onListeningChangeRef = useRef(onListeningChange);
+  const onSpeakingChangeRef = useRef(onSpeakingChange);
+  const onLiveTranscriptRef = useRef(onLiveTranscript);
+
+  useEffect(() => {
+    onTranscriptRef.current = onTranscript;
+    onListeningChangeRef.current = onListeningChange;
+    onSpeakingChangeRef.current = onSpeakingChange;
+    onLiveTranscriptRef.current = onLiveTranscript;
+  }, [onTranscript, onListeningChange, onSpeakingChange, onLiveTranscript]);
 
   // Initialize SpeechSynthesis and load system voices
   useEffect(() => {
@@ -89,6 +104,15 @@ export function useVoice({
     }
     setAudioLevel(0);
     setWaveformBars([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]);
+  }, []);
+
+  // Stop active speech playback
+  const stopSpeaking = useCallback(() => {
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    setIsSpeaking(false);
+    onSpeakingChangeRef.current?.(false);
   }, []);
 
   // Start audio waveform analyzer in parallel without blocking speech recognition
@@ -234,11 +258,7 @@ export function useVoice({
     if (typeof window === "undefined") return;
 
     // Interrupt any active speech first
-    if (synthRef.current?.speaking) {
-      synthRef.current.cancel();
-      setIsSpeaking(false);
-      onSpeakingChange?.(false);
-    }
+    stopSpeaking();
 
     // Stop any existing recognition instance cleanly
     if (recognitionRef.current) {
@@ -254,12 +274,12 @@ export function useVoice({
     liveTranscriptRef.current = "";
     setLiveTranscript("");
     setIsListening(true);
-    onListeningChange?.(true);
+    onListeningChangeRef.current?.(true);
 
     // Initialize fresh recognition instance
     createAndStartRecognition();
 
-    // 2. Launch waveform audio analyser in parallel
+    // Launch waveform audio analyser in parallel
     startAudioWaveform();
   }, [createAndStartRecognition, startAudioWaveform, stopSpeaking]);
 
@@ -270,14 +290,13 @@ export function useVoice({
     const textToDeliver = liveTranscriptRef.current.trim();
     if (textToDeliver && !hasDeliveredRef.current && !textToDeliver.startsWith("⚠️")) {
       hasDeliveredRef.current = true;
-      onTranscript?.(textToDeliver);
+      onTranscriptRef.current?.(textToDeliver);
     }
 
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (_) { }
-      // Will nullify after grace period or in onend
       setTimeout(() => {
         recognitionRef.current = null;
       }, 300);
@@ -285,15 +304,15 @@ export function useVoice({
 
     cleanupAudioAnalyser();
     setIsListening(false);
-    onListeningChange?.(false);
+    onListeningChangeRef.current?.(false);
 
     // Fallback transcript delivery in case onend takes more than 280ms
     fallbackDeliveryTimerRef.current = setTimeout(() => {
       if (!hasDeliveredRef.current) {
-        const textToDeliver = (finalTranscriptRef.current + " " + liveTranscriptRef.current).trim();
-        if (textToDeliver && !textToDeliver.startsWith("⚠️")) {
+        const text = (finalTranscriptRef.current + " " + liveTranscriptRef.current).trim();
+        if (text && !text.startsWith("⚠️")) {
           hasDeliveredRef.current = true;
-          onTranscriptRef.current?.(textToDeliver);
+          onTranscriptRef.current?.(text);
         }
       }
 
@@ -307,14 +326,6 @@ export function useVoice({
       }, 350);
     }, 280);
   }, [cleanupAudioAnalyser]);
-
-  const stopSpeaking = useCallback(() => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-    }
-    setIsSpeaking(false);
-    onSpeakingChange?.(false);
-  }, [onSpeakingChange]);
 
   const speak = useCallback(
     (text: string) => {
@@ -345,22 +356,22 @@ export function useVoice({
 
       utterance.onstart = () => {
         setIsSpeaking(true);
-        onSpeakingChange?.(true);
+        onSpeakingChangeRef.current?.(true);
       };
 
       utterance.onend = () => {
         setIsSpeaking(false);
-        onSpeakingChange?.(false);
+        onSpeakingChangeRef.current?.(false);
       };
 
       utterance.onerror = () => {
         setIsSpeaking(false);
-        onSpeakingChange?.(false);
+        onSpeakingChangeRef.current?.(false);
       };
 
       synthRef.current.speak(utterance);
     },
-    [voiceConfig, availableVoices, onSpeakingChange]
+    [voiceConfig, availableVoices]
   );
 
   return {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
 import TitleBar from "./TitleBar";
@@ -31,11 +31,12 @@ export default function Widget() {
   const [activeQuestion, setActiveQuestion] = useState<ScenarioQuestion | null>(null);
   const [bubbleDismissed, setBubbleDismissed] = useState(false);
 
-  // Push-to-talk hold tracking
+  // Push-to-talk hold and window dragging tracking
   const [isHoldingVoice, setIsHoldingVoice] = useState(false);
   const isHoldingVoiceRef = useRef(false);
-  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const mouseDownTimeRef = useRef<number>(0);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingWindowRef = useRef(false);
 
   const { requests, respond } = usePermissions();
 
@@ -234,9 +235,11 @@ export default function Widget() {
   // - Hold LMB to Speak through Mic (with realtime transcription)
   // - LMB to open Chat and Type
   // - LMB on Orb to close Chat when opened
-  const handleOrbMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only primary (left) button
-    mouseDownTimeRef.current = Date.now();
+  const handleOrbMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return; // Only primary (left) button
+      dragStartPosRef.current = { x: e.screenX, y: e.screenY };
+      isDraggingWindowRef.current = false;
 
       // Start push-to-talk hold timer
       holdTimerRef.current = setTimeout(() => {
@@ -251,35 +254,54 @@ export default function Widget() {
     [startListening]
   );
 
-  const handleOrbMouseUp = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  const handleOrbMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragStartPosRef.current) return;
 
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
+    const dx = e.screenX - dragStartPosRef.current.x;
+    const dy = e.screenY - dragStartPosRef.current.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 6) {
+      isDraggingWindowRef.current = true;
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+        holdTimerRef.current = null;
+      }
+      if (isHoldingVoiceRef.current) {
+        isHoldingVoiceRef.current = false;
+        setIsHoldingVoice(false);
+      }
+      try {
+        const win = getCurrentWebviewWindow();
+        win.startDragging();
+      } catch (_) {}
     }
+  }, []);
 
-    const elapsed = Date.now() - mouseDownTimeRef.current;
+  const handleOrbMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
 
-    if (isHoldingVoiceRef.current) {
-      // Released after hold -> Stop voice and let transcript deliver
-      isHoldingVoiceRef.current = false;
-      setIsHoldingVoice(false);
-      stopListening();
-    } else if (elapsed < 280) {
-      // Standard Left Click
-      if (isSpeaking) {
-        stopSpeaking();
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+        holdTimerRef.current = null;
+      }
+
+      const wasDragging = isDraggingWindowRef.current;
+      dragStartPosRef.current = null;
+      isDraggingWindowRef.current = false;
+
+      if (wasDragging) {
         return;
       }
 
-      // Toggle Chat:
-      // If currently orb -> open chat
-      // If currently chat -> close chat back to orb
-      // If currently full -> collapse back to orb
-      setMode((prev) => (prev === "orb" ? "chat" : "orb"));
-    }
-  };
+      // If user was actively holding to talk (push-to-talk):
+      if (isHoldingVoiceRef.current) {
+        isHoldingVoiceRef.current = false;
+        setIsHoldingVoice(false);
+        stopListening();
+        return;
+      }
 
       // Standard Click / Tap:
       if (mode === "orb") {
@@ -295,7 +317,6 @@ export default function Widget() {
 
   const handleOrbDoubleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    // Double click always opens full chat
     setMode("chat");
   }, []);
 
@@ -304,7 +325,7 @@ export default function Widget() {
     e.preventDefault();
     e.stopPropagation();
     setMode((prev) => (prev === "full" ? "orb" : "full"));
-  };
+  }, []);
 
   const hasRequests = requests.length > 0;
   const isWorking = agentSteps.length > 0;
@@ -411,7 +432,9 @@ export default function Widget() {
             waveformBars={waveformBars}
             isHoldingVoice={isHoldingVoice}
             onMouseDown={handleOrbMouseDown}
+            onMouseMove={handleOrbMouseMove}
             onMouseUp={handleOrbMouseUp}
+            onDoubleClick={handleOrbDoubleClick}
             onContextMenu={handleOrbContextMenu}
           />
         </div>
@@ -454,7 +477,9 @@ export default function Widget() {
                   waveformBars={waveformBars}
                   isHoldingVoice={isHoldingVoice}
                   onMouseDown={handleOrbMouseDown}
+                  onMouseMove={handleOrbMouseMove}
                   onMouseUp={handleOrbMouseUp}
+                  onDoubleClick={handleOrbDoubleClick}
                   onContextMenu={handleOrbContextMenu}
                 />
               </div>
@@ -559,7 +584,9 @@ export default function Widget() {
             waveformBars={waveformBars}
             isHoldingVoice={isHoldingVoice}
             onMouseDown={handleOrbMouseDown}
+            onMouseMove={handleOrbMouseMove}
             onMouseUp={handleOrbMouseUp}
+            onDoubleClick={handleOrbDoubleClick}
             onContextMenu={handleOrbContextMenu}
           />
           <p className="mt-2 text-[11px] font-medium text-neutral-300 select-none">
