@@ -1,0 +1,19 @@
+{
+  "id": "system-info-demo",
+  "name": "System Info Demo",
+  "description": "Custom plug-in skill that queries Windows uptime and battery status",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "get_battery_status",
+      "description": "Returns current battery percentage and charge status",
+      "risk": "read_only",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "handler": "run.bat"
+    }
+  ]
+}
+

@@ -1,0 +1,54 @@
+{
+  "id": "blender-automation",
+  "name": "Blender 3D Scene Creator",
+  "description": "Autonomously creates, sets up, and renders 3D scenes in Blender 4.4 with procedural objects, lighting, materials, and cameras using bpy Python automation.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "blender_create_scene",
+      "description": "Create a complete 3D scene in Blender with objects, lighting, camera, and materials. Saves to a .blend file and optionally opens Blender GUI.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "scene_type": { "type": "string", "description": "Type of scene: 'room', 'abstract_art', 'product_studio', 'landscape', 'cyberpunk', or 'custom'" },
+          "description": { "type": "string", "description": "Detailed description of objects, layout, and colors" },
+          "output_blend_path": { "type": "string", "description": "Optional file path to save the .blend scene" },
+          "open_gui": { "type": "boolean", "description": "Whether to launch Blender GUI with the scene open (default true)" }
+        },
+        "required": ["description"]
+      },
+      "handler": "create_scene.ps1"
+    },
+    {
+      "name": "blender_render",
+      "description": "Render a 3D scene from Blender to a high-resolution PNG image.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "blend_file": { "type": "string", "description": "Path to the .blend file (optional, uses active scene if omitted)" },
+          "output_image_path": { "type": "string", "description": "Target PNG file path for the render" },
+          "samples": { "type": "number", "description": "Render samples (default 64 for fast render)" }
+        },
+        "required": ["output_image_path"]
+      },
+      "handler": "render_scene.ps1"
+    },
+    {
+      "name": "blender_run_python",
+      "description": "Execute arbitrary bpy Python script in Blender for advanced modeling, shading, and animation.",
+      "risk": "high",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "python_code": { "type": "string", "description": "Python bpy code to run" },
+          "open_gui": { "type": "boolean", "description": "Open Blender window after execution" }
+        },
+        "required": ["python_code"]
+      },
+      "handler": "run_python.ps1"
+    }
+  ]
+}
+

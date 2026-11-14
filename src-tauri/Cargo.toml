@@ -1,0 +1,43 @@
+[package]
+name = "alien"
+version = "0.1.0"
+description = "ALIEN — your personal AI assistant"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "alien_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "ALIEN"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-window-state = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+sysinfo = "0.33"
+arboard = "3"
+dirs = "5"
+keyring = "2"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+futures-util = "0.3"
+
+[profile.release]
+strip = false
+lto = false
+codegen-units = 16

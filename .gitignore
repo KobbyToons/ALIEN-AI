@@ -1,0 +1,33 @@
+# --- Build & Dependencies ---
+dist/
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+target/
+*.tsbuildinfo
+
+# --- Runtime & Storage ---
+.buddy_data/
+EBWebView/
+*.log
+*.dmp
+*.tmp
+crash.log
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Env ---
+.env
+.env.local
+.env.*
+!.env.example

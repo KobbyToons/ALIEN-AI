@@ -1,0 +1,116 @@
+{
+  "id": "obsidian-memory",
+  "name": "Obsidian Memory & Vault Integration",
+  "description": "Full autonomous integration with your local Obsidian vault to create notes, rewrite and reorder facts, search notes, teach workflows, and manage memory with [[wikilinks]].",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "obsidian_create_note",
+      "description": "Create a new Markdown note in the Obsidian vault under a specified category (e.g. Daily, Projects, Preferences, Learned, Profile, Instructions, Research).",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string", "description": "Category or folder in the vault (e.g. Daily, Projects, Preferences, Learned, Instructions, Research)" },
+          "title": { "type": "string", "description": "Note title without extension" },
+          "content": { "type": "string", "description": "Note markdown content with [[wikilinks]]" }
+        },
+        "required": ["title", "content"]
+      },
+      "handler": "create_note.ps1"
+    },
+    {
+      "name": "obsidian_rewrite_note",
+      "description": "Rewrite, update, or reorganize an existing note in the Obsidian vault to correct outdated facts, optimize knowledge, or reorder content.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string", "description": "Category folder (e.g. Preferences, Learned, Profile, Projects, Instructions, Research)" },
+          "title": { "type": "string", "description": "Note title" },
+          "content": { "type": "string", "description": "New updated markdown content replacing old facts" }
+        },
+        "required": ["title", "content"]
+      },
+      "handler": "rewrite_note.ps1"
+    },
+    {
+      "name": "obsidian_teach",
+      "description": "Teach ALIEN a custom procedure, workflow, preference, or behavioral rule. Persists cleanly into Instructions/<Title>.md.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "Title of the taught rule or procedure" },
+          "instructions": { "type": "string", "description": "Detailed step-by-step instructions or rules taught by the user" }
+        },
+        "required": ["title", "instructions"]
+      },
+      "handler": "teach_workflow.ps1"
+    },
+    {
+      "name": "obsidian_append_note",
+      "description": "Append timestamped content or an insight to an existing Obsidian note.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string", "description": "Category folder (e.g. Daily, Projects, Preferences, Learned)" },
+          "title": { "type": "string", "description": "Note title" },
+          "content": { "type": "string", "description": "Text or bullet points to append" }
+        },
+        "required": ["title", "content"]
+      },
+      "handler": "append_note.ps1"
+    },
+    {
+      "name": "obsidian_read_note",
+      "description": "Read the text content of a note from the Obsidian vault.",
+      "risk": "read_only",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string", "description": "Category folder (optional, will search all if omitted)" },
+          "title": { "type": "string", "description": "Note title to read" }
+        },
+        "required": ["title"]
+      },
+      "handler": "read_note.ps1"
+    },
+    {
+      "name": "obsidian_search_notes",
+      "description": "Search for keywords or topics across all markdown notes in the Obsidian vault.",
+      "risk": "read_only",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Keyword or topic to search" }
+        },
+        "required": ["query"]
+      },
+      "handler": "search_notes.ps1"
+    },
+    {
+      "name": "obsidian_list_notes",
+      "description": "List all notes and their categories currently in the Obsidian vault.",
+      "risk": "read_only",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string", "description": "Optional category filter" }
+        }
+      },
+      "handler": "list_notes.ps1"
+    },
+    {
+      "name": "obsidian_vault_status",
+      "description": "Returns current Obsidian vault path, connection state, and note counts.",
+      "risk": "read_only",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      },
+      "handler": "vault_status.ps1"
+    }
+  ]
+}

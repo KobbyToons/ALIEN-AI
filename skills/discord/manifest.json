@@ -1,0 +1,55 @@
+{
+  "id": "discord-automation",
+  "name": "Discord Messenger & Controller",
+  "description": "Autonomously send messages, DMs, announcements, or notifications to Discord channels and users using Webhooks, Bot API, or by launching Discord deep links.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "discord_send_message",
+      "description": "Send a message or notification to a Discord channel or user via Webhook or Bot Token.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string", "description": "Text message content to send" },
+          "recipient": { "type": "string", "description": "Target recipient name, channel name, or user ID" },
+          "webhook_url": { "type": "string", "description": "Optional Discord webhook URL" },
+          "bot_token": { "type": "string", "description": "Optional Discord bot token" },
+          "channel_id": { "type": "string", "description": "Optional Discord channel ID when using bot token" }
+        },
+        "required": ["content"]
+      },
+      "handler": "send_message.ps1"
+    },
+    {
+      "name": "discord_send_dm",
+      "description": "Send a direct message (DM) to a specific Discord user using Discord Bot API or opening the DM in Discord.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "string", "description": "Discord User Snowflake ID" },
+          "user_name": { "type": "string", "description": "Discord username or nickname" },
+          "content": { "type": "string", "description": "Message to send" },
+          "bot_token": { "type": "string", "description": "Optional Discord bot token" }
+        },
+        "required": ["content"]
+      },
+      "handler": "send_dm.ps1"
+    },
+    {
+      "name": "discord_open_chat",
+      "description": "Launch Discord or navigate directly to a specific user DM or server channel using deep link.",
+      "risk": "low",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "target": { "type": "string", "description": "User ID, Channel ID, or empty to just launch Discord" },
+          "guild_id": { "type": "string", "description": "Optional Server (Guild) ID" }
+        }
+      },
+      "handler": "open_chat.ps1"
+    }
+  ]
+}
+

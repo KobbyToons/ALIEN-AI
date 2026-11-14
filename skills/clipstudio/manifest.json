@@ -1,0 +1,49 @@
+{
+  "id": "clipstudio-automation",
+  "name": "Clip Studio Paint Controller",
+  "description": "Autonomously launches Clip Studio Paint, creates new project canvases (Illustration, Webtoon, Comic), opens artwork and comic projects, and manages CELSYS files.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "clipstudio_launch",
+      "description": "Launch Clip Studio Paint or bring the window to the foreground.",
+      "risk": "low",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "mode": { "type": "string", "description": "'paint' for Clip Studio Paint (default) or 'hub' for Clip Studio manager" }
+        }
+      },
+      "handler": "launch.ps1"
+    },
+    {
+      "name": "clipstudio_open_file",
+      "description": "Open an artwork, illustration, or comic project (.clip, .psd, .png, .jpg) directly in Clip Studio Paint.",
+      "risk": "low",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string", "description": "Absolute or relative file path to the artwork" }
+        },
+        "required": ["file_path"]
+      },
+      "handler": "open_file.ps1"
+    },
+    {
+      "name": "clipstudio_new_canvas",
+      "description": "Create a new artwork canvas preset file (Illustration, Webtoon, Comic/Manga) and open it directly in Clip Studio Paint.",
+      "risk": "medium",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "preset": { "type": "string", "description": "'illustration' (1920x1080), 'webtoon' (800x1280), '4k_canvas' (3840x2160), 'comic_a4' (2480x3508), or 'square' (2048x2048)" },
+          "project_name": { "type": "string", "description": "Name for the new artwork project" },
+          "save_dir": { "type": "string", "description": "Optional folder directory to save the new project" }
+        },
+        "required": ["project_name"]
+      },
+      "handler": "new_canvas.ps1"
+    }
+  ]
+}
+
