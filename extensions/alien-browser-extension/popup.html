@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ALIEN Assistant — Brave Bridge</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-group">
+        <img src="icons/icon32.png" alt="ALIEN" class="logo-icon" />
+        <div>
+          <h1 class="logo-title">ALIEN</h1>
+          <span class="logo-subtitle">Brave Browser Bridge</span>
+        </div>
+      </div>
+      <div class="status-badge" id="statusBadge">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">Checking...</span>
+      </div>
+    </header>
+
+    <!-- Active Tab Info -->
+    <section class="card tab-card">
+      <div class="card-title">ACTIVE BRAVE TAB</div>
+      <div class="tab-info">
+        <div class="tab-title" id="activeTabTitle">Loading...</div>
+        <div class="tab-url" id="activeTabUrl">...</div>
+      </div>
+    </section>
+
+    <!-- Quick Controls -->
+    <section class="card controls-card">
+      <div class="card-title">AUTOMATION CONTROLS</div>
+      <div class="toggle-row">
+        <span>Allow AI Browser Actions</span>
+        <label class="switch">
+          <input type="checkbox" id="toggleEnabled" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="button-row">
+        <button id="btnPing" class="btn btn-secondary">⚡ Ping Bridge</button>
+        <button id="btnRunTest" class="btn btn-primary">🧪 Run Code Test</button>
+      </div>
+    </section>
+
+    <!-- Recent Actions Feed -->
+    <section class="card actions-card">
+      <div class="card-title-row">
+        <span class="card-title">LIVE ACTION FEED</span>
+        <button id="btnClearActions" class="btn-link">Clear</button>
+      </div>
+      <div class="actions-list" id="actionsList">
+        <div class="empty-state">No recent actions. Ready for ALIEN commands.</div>
+      </div>
+    </section>
+
+    <!-- Footer Settings -->
+    <footer class="footer">
+      <div class="port-config">
+        <span>Bridge Port:</span>
+        <input type="number" id="inputPort" value="4114" min="1024" max="65535" />
+        <button id="btnSavePort" class="btn-small">Set</button>
+      </div>
+      <div class="footer-links">
+        <span class="version-tag">v1.0.0</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
