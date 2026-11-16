@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
   Automated Installer for ALIEN Assistant Brave Browser Extension
 #>

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { modelStreamChat, runAgentTask, fsRead, fsList } from "../lib/tauri";
+import { modelStreamChat, runAgentTask, stopGeneration as stopGenerationApi, fsRead, fsList } from "../lib/tauri";
 import type { AgentStepEvent, BuddyState, ChatMessage, ChatAttachment, ModelProvider } from "../types";
 
 export interface ActiveModelConfig {
@@ -356,6 +356,36 @@ export function useChat(onStateChange?: (state: BuddyState) => void) {
     [isStreaming, messages, modelConfig, onStateChange]
   );
 
+  const stopGeneration = useCallback(async () => {
+    const reqId = activeReqIdRef.current;
+    setIsStreaming(false);
+    activeReqIdRef.current = null;
+    onStateChange?.("idle");
+
+    try {
+      await stopGenerationApi(reqId || undefined);
+    } catch (_) { }
+
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.role === "assistant" && last.isStreaming) {
+        return [
+          ...prev.slice(0, -1),
+          {
+            ...last,
+            content: last.content
+              ? `${last.content}\n\n*[Generation stopped by user]*`
+              : "⚠️ Generation stopped by user.",
+            isStreaming: false,
+          },
+        ];
+      }
+      return prev;
+    });
+
+    setAgentSteps([]);
+  }, [onStateChange]);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setAgentSteps([]);
@@ -368,6 +398,7 @@ export function useChat(onStateChange?: (state: BuddyState) => void) {
     modelConfig,
     updateModelConfig,
     sendMessage,
+    stopGeneration,
     clearMessages,
   };
 }

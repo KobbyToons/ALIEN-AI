@@ -93,6 +93,11 @@ pub async fn model_stream_chat(
     let app_clone = app.clone();
     let req_id_clone = request_id.clone();
 
+    if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
+        cm.clear(&request_id);
+        cm.reset_global();
+    }
+
     // Inject customizable Foundation Identity Manual & Directives into context
     let mut enriched_messages = messages.clone();
     if let Some(vault) = app.try_state::<ObsidianVault>() {
@@ -117,6 +122,11 @@ pub async fn model_stream_chat(
             custom_endpoint.as_deref(),
             &enriched_messages,
             move |chunk| {
+                if let Some(cm) = app_clone.try_state::<crate::services::CancellationManager>() {
+                    if cm.is_cancelled(&req_id_clone) {
+                        return;
+                    }
+                }
                 let _ = app_clone.emit(
                     "buddy://chat-chunk",
                     serde_json::json!({
@@ -127,6 +137,12 @@ pub async fn model_stream_chat(
             },
         )
         .await;
+
+    if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
+        if cm.is_cancelled(&request_id) {
+            return Ok("[Generation stopped by user]".into());
+        }
+    }
 
     match res {
         Ok(full_text) => {
@@ -160,4 +176,24 @@ pub async fn model_stream_chat(
             Err(e)
         }
     }
+}
+
+#[tauri::command]
+pub fn stop_generation(
+    app: tauri::AppHandle,
+    request_id: Option<String>,
+) -> Result<(), String> {
+    if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
+        cm.cancel(request_id.clone());
+    }
+    if let Some(id) = request_id {
+        let _ = app.emit(
+            "buddy://chat-end",
+            serde_json::json!({
+                "requestId": &id,
+                "fullText": "[Generation stopped by user]"
+            }),
+        );
+    }
+    Ok(())
 }

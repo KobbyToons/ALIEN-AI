@@ -60,6 +60,11 @@ impl AgentService {
         let thinking_context = learning.format_prompt_block(&vault);
         let system_identity = vault.get_system_identity();
 
+        if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
+            cm.clear(&task_id);
+            cm.reset_global();
+        }
+
         let system_prompt = format!(
             "{}\n\n{}\n{}\nAvailable Tools Schema:\n{}\n\nWhen you want to call a tool, respond ONLY with a JSON object in this exact format:\n```json\n{{\n  \"tool\": \"tool_name\",\n  \"arguments\": {{ ... }}\n}}\n```\nDo not add conversational commentary around tool calls.\nWhen you have finished the task, or if you do not need to call a tool, reply in a warm, concise, witty conversational tone to the user.",
             system_identity, thinking_context, memory_context, tools_schema
@@ -80,6 +85,22 @@ impl AgentService {
         let mut final_response = String::new();
 
         while step < MAX_AGENT_STEPS {
+            // Check if cancelled before next step
+            if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
+                if cm.is_cancelled(&task_id) {
+                    let _ = app.emit(
+                        "buddy://agent-step",
+                        json!({
+                            "taskId": &task_id,
+                            "step": step,
+                            "status": "done",
+                            "description": "Agent task stopped by user."
+                        }),
+                    );
+                    return Ok("⚠️ Agent task stopped by user.".into());
+                }
+            }
+
             step += 1;
 
             let _ = app.emit(
@@ -122,6 +143,22 @@ impl AgentService {
 
             // Check if model returned a tool call JSON
             if let Some(tool_call) = Self::parse_tool_call(&model_output) {
+                // Check if cancelled right before executing the tool!
+                if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
+                    if cm.is_cancelled(&task_id) {
+                        let _ = app.emit(
+                            "buddy://agent-step",
+                            json!({
+                                "taskId": &task_id,
+                                "step": step,
+                                "status": "done",
+                                "description": "Prevented tool execution — stopped by user."
+                            }),
+                        );
+                        return Ok("⚠️ Prevented tool execution — stopped by user.".into());
+                    }
+                }
+
                 let _ = app.emit(
                     "buddy://agent-step",
                     json!({

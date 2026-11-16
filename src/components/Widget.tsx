@@ -47,6 +47,7 @@ export default function Widget() {
     modelConfig,
     updateModelConfig,
     sendMessage,
+    stopGeneration,
     clearMessages,
   } = useChat((st) => {
     setBuddyState(st);
@@ -144,6 +145,13 @@ export default function Widget() {
         target?.tagName === "INPUT" ||
         target?.tagName === "TEXTAREA" ||
         target?.isContentEditable;
+
+      if (e.key === "Escape" && isStreaming) {
+        e.preventDefault();
+        if (isSpeaking) stopSpeaking();
+        stopGeneration();
+        return;
+      }
 
       if (e.key === "`" && !isEditing) {
         e.preventDefault();
@@ -543,6 +551,10 @@ export default function Widget() {
             onSend={(text, attachments) => {
               stopSpeaking();
               sendMessage(text, attachments);
+            }}
+            onStop={() => {
+              stopSpeaking();
+              stopGeneration();
             }}
             isStreaming={isStreaming}
             isListening={isListening}

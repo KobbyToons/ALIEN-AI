@@ -160,6 +160,10 @@ export async function runAgentTask(
   });
 }
 
+export async function stopGeneration(requestId?: string): Promise<void> {
+  return invoke<void>("stop_generation", { requestId });
+}
+
 // ── Obsidian Memory Vault ───────────────────────────────────────
 
 export async function setVaultPath(path: string): Promise<VaultInfo> {

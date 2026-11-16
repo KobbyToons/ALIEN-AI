@@ -102,6 +102,7 @@ pub fn run() {
             app.manage(McpRegistry::new());
             app.manage(ObsidianVault::new(app_data.clone()));
             app.manage(LearningService::new());
+            app.manage(services::CancellationManager::new());
 
             let skill_loader = SkillLoader::new(app_data);
             let _ = skill_loader.reload();
@@ -142,6 +143,7 @@ pub fn run() {
             commands::get_google_account_status,
             commands::connect_google_account,
             commands::model_stream_chat,
+            commands::stop_generation,
             commands::run_agent_task,
             commands::set_vault_path,
             commands::get_vault_info,

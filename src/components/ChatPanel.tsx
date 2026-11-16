@@ -7,6 +7,7 @@ import type { ChatMessage, ChatAttachment } from "../types";
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSend: (text: string, attachments?: ChatAttachment[]) => void;
+  onStop?: () => void;
   isStreaming?: boolean;
   isListening: boolean;
   isSpeaking: boolean;
@@ -30,6 +31,7 @@ interface ChatPanelProps {
 export default function ChatPanel({
   messages,
   onSend,
+  onStop,
   isStreaming,
   isListening,
   isSpeaking,
@@ -107,9 +109,18 @@ export default function ChatPanel({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Escape" && isStreaming && onStop) {
+      e.preventDefault();
+      onStop();
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (isStreaming) {
+        onStop?.();
+      } else {
+        handleSubmit();
+      }
     }
   };
 
@@ -444,28 +455,54 @@ export default function ChatPanel({
           "
         />
 
-        {/* Send Button */}
-        <button
-          type="submit"
-          disabled={(!input.trim() && attachments.length === 0) || isStreaming}
-          className="
-            p-2 rounded-xl
-            bg-red-600 hover:bg-red-700
-            text-white text-xs font-medium
-            disabled:opacity-30 disabled:cursor-not-allowed
-            transition-all shadow-md shadow-red-600/30
-          "
-          aria-label="Send message"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="w-4 h-4"
+        {/* Send / Stop Button: Send is replaced by Stop when ALIEN is thinking/generating */}
+        {isStreaming ? (
+          <button
+            type="button"
+            onClick={onStop}
+            className="
+              p-2 rounded-xl
+              bg-red-600 hover:bg-red-500 active:scale-95
+              text-white text-xs font-medium
+              transition-all shadow-md shadow-red-600/40
+              animate-pulse flex items-center justify-center
+            "
+            aria-label="Stop generation"
+            title="Stop generation (prevent unwanted actions)"
           >
-            <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.925A1.5 1.5 0 005.135 9.25h6.115a.75.75 0 010 1.5H5.135a1.5 1.5 0 00-1.442 1.086l-1.414 4.926a.75.75 0 00.826.95 28.896 28.896 0 0015.293-7.154.75.75 0 000-1.115A28.897 28.897 0 003.105 2.289z" />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4"
+            >
+              <rect x="5" y="5" width="10" height="10" rx="2" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!input.trim() && attachments.length === 0}
+            className="
+              p-2 rounded-xl
+              bg-red-600 hover:bg-red-700
+              text-white text-xs font-medium
+              disabled:opacity-30 disabled:cursor-not-allowed
+              transition-all shadow-md shadow-red-600/30
+            "
+            aria-label="Send message"
+            title="Send message"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4"
+            >
+              <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.925A1.5 1.5 0 005.135 9.25h6.115a.75.75 0 010 1.5H5.135a1.5 1.5 0 00-1.442 1.086l-1.414 4.926a.75.75 0 00.826.95 28.896 28.896 0 0015.293-7.154.75.75 0 000-1.115A28.897 28.897 0 003.105 2.289z" />
+            </svg>
+          </button>
+        )}
       </form>
     </div>
   );
