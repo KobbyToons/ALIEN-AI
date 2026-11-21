@@ -28,6 +28,9 @@ function isAutonomousTask(text: string): boolean {
 
   // Action commands that require autonomous PC tools & execution
   const actionTriggers = [
+    /\b(look at|see|capture|take a look at|check|inspect|view)\s+(my\s+)?(screen|display|monitor|window)\b/i,
+    /\b(what('?s| is)\s+(on|showing on)\s+(my\s+)?(screen|display|monitor))\b/i,
+    /\b(screenshot|screen capture)\b/i,
     /\b(create|make|write|generate)\s+(a\s+)?(file|script|note|folder|document|app|program)\b/i,
     /\b(delete|remove|erase|clear)\s+(the\s+)?(file|folder|cache)\b/i,
     /\b(run|execute|launch|start|open)\s+(the\s+)?(terminal|powershell|cmd|app|script|process|browser)\b/i,

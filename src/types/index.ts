@@ -168,3 +168,13 @@ export interface GoogleAccountStatus {
 
 export type WidgetMode = "orb" | "chat" | "full";
 
+export interface MonitorInfo {
+  name: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  scale_factor: number;
+  is_primary: boolean;
+}
+

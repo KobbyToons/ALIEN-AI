@@ -5,6 +5,7 @@ pub mod credentials;
 pub mod learning;
 pub mod mcp;
 pub mod obsidian;
+pub mod vision;
 
 pub use credentials::CredentialService;
 #[allow(unused_imports)]

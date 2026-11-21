@@ -8,12 +8,11 @@ use tauri::{
 
 /// Build the system-tray icon with a right-click context menu.
 pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
-    let icon = if let Some(default_icon) = app.default_window_icon() {
-        default_icon.clone()
-    } else {
-        let icon_rgba = generate_orb_icon(32);
-        tauri::image::Image::new_owned(icon_rgba, 32, 32)
-    };
+    let icon = tauri::image::Image::from_app_icon_resource(32)
+        .unwrap_or_else(|_| {
+            let icon_rgba = generate_orb_icon(32);
+            tauri::image::Image::new_owned(icon_rgba, 32, 32)
+        });
 
     let toggle_item = MenuItemBuilder::with_id("toggle", "Show / Hide ALIEN (Ctrl+Space)").build(app)?;
     let settings_item = MenuItemBuilder::with_id("settings", "Settings...").build(app)?;

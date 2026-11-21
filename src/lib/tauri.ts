@@ -11,6 +11,7 @@ import type {
   LoadedSkill,
   MemoryNote,
   ModelProvider,
+  MonitorInfo,
   PermissionDecision,
   ProcessInfo,
   ScenarioQuestion,
@@ -244,3 +245,20 @@ export async function listSkills(): Promise<LoadedSkill[]> {
 export async function reloadSkills(): Promise<LoadedSkill[]> {
   return invoke<LoadedSkill[]>("reload_skills");
 }
+
+// ── Vision & Screen Capture (Phase A) ────────────────────────────────────────
+
+export async function listMonitors(): Promise<MonitorInfo[]> {
+  return invoke<MonitorInfo[]>("list_monitors");
+}
+
+export async function captureScreen(
+  monitorIndex?: number,
+  maxLongEdge?: number,
+): Promise<string> {
+  return invoke<string>("capture_screen", {
+    monitorIndex: monitorIndex ?? null,
+    maxLongEdge: maxLongEdge ?? null,
+  });
+}
+

@@ -206,6 +206,24 @@ impl McpRegistry {
                         "required": ["topic"]
                     }),
                 },
+                // ── Phase A: Vision ───────────────────────────────────────────
+                McpTool {
+                    name: "screenshot".into(),
+                    description: "Capture a screenshot of the user's screen (or a specific monitor) and return it as a base64 JPEG so you can describe or analyse what is visible. Use this when the user asks you to 'look at my screen', 'what do you see?', or similar.".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "monitor_index": {
+                                "type": "integer",
+                                "description": "0-based monitor index. Omit (or null) for the primary monitor."
+                            },
+                            "max_long_edge": {
+                                "type": "integer",
+                                "description": "Downscale so the long edge is at most this many pixels (default 1280)."
+                            }
+                        }
+                    }),
+                },
             ],
         }
     }
@@ -349,6 +367,22 @@ impl McpRegistry {
                     "Deep research complete! Findings documented in Obsidian vault as [[Research/{}]] with cross-links.",
                     topic
                 ))
+            }
+            // ── Phase A: Vision ───────────────────────────────────────────
+            "screenshot" => {
+                let idx = call.arguments.get("monitor_index")
+                    .and_then(|v| v.as_u64())
+                    .map(|n| n as usize);
+                let max_edge = call.arguments.get("max_long_edge")
+                    .and_then(|v| v.as_u64())
+                    .map(|n| n as u32);
+                tokio::task::spawn_blocking(move || {
+                    crate::services::vision::capture_monitor_base64(idx, max_edge)
+                })
+                .await
+                .map_err(|e| format!("Task error: {e}"))
+                .and_then(|r| r)
+                .map(|b64| format!("data:image/jpeg;base64,{b64}"))
             }
             _ => {
                 // Check if tool is provided by any loaded custom Skill (Blender, Discord, Clip Studio, etc.)

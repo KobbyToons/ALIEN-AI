@@ -162,6 +162,8 @@ pub fn run() {
             commands::get_thinking_profile,
             commands::list_skills,
             commands::reload_skills,
+            commands::list_monitors,
+            commands::capture_screen,
         ])
         // ── Launch ───────────────────────────────────────────────
         .run(tauri::generate_context!())

@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod ai;
+pub mod capture;
 pub mod clipboard;
 pub mod filesystem;
 pub mod learning;
@@ -11,6 +12,7 @@ pub mod system;
 
 pub use agent::*;
 pub use ai::*;
+pub use capture::*;
 pub use clipboard::*;
 pub use filesystem::*;
 pub use learning::*;
