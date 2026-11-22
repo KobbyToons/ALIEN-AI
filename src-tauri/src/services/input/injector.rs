@@ -271,6 +271,64 @@ impl InputInjector {
         }
     }
 
+    /// Smooth pen or brush stroke across multiple interpolated points with optional pressure.
+    pub async fn stroke_with_pressure(points: Vec<(i32, i32, u32)>) -> Result<(), String> {
+        #[cfg(windows)]
+        {
+            if points.is_empty() {
+                return Ok(());
+            }
+
+            if super::is_takeover_triggered() || super::is_kill_switch_active() {
+                return Err("Stroke aborted: user takeover or kill switch active.".into());
+            }
+
+            // Move to initial stroke coordinate
+            let (start_x, start_y, _) = points[0];
+            Self::move_cursor_smooth(start_x, start_y).await?;
+            sleep(Duration::from_millis(30)).await;
+
+            // Pen down / Left mouse down
+            win32::send_mouse_event(win32::MOUSEEVENTF_LEFTDOWN, 0);
+            sleep(Duration::from_millis(20)).await;
+
+            // Interpolate smoothly through remaining points with micro-sleeps
+            for window in points.windows(2) {
+                if super::is_takeover_triggered() || super::is_kill_switch_active() {
+                    win32::send_mouse_event(win32::MOUSEEVENTF_LEFTUP, 0);
+                    return Err("Stroke interrupted by user takeover.".into());
+                }
+
+                let p1 = window[0];
+                let p2 = window[1];
+
+                let dist = (((p2.0 - p1.0).pow(2) + (p2.1 - p1.1).pow(2)) as f64).sqrt();
+                let steps = (dist / 8.0).clamp(3.0, 30.0) as usize;
+
+                for step in 1..=steps {
+                    let t = step as f64 / steps as f64;
+                    let curr_x = (p1.0 as f64 + (p2.0 - p1.0) as f64 * t).round() as i32;
+                    let curr_y = (p1.1 as f64 + (p2.1 - p1.1) as f64 * t).round() as i32;
+
+                    unsafe {
+                        win32::SetCursorPos(curr_x, curr_y);
+                    }
+                    sleep(Duration::from_millis(12)).await;
+                }
+            }
+
+            // Pen up / Left mouse up
+            sleep(Duration::from_millis(25)).await;
+            win32::send_mouse_event(win32::MOUSEEVENTF_LEFTUP, 0);
+            Ok(())
+        }
+        #[cfg(not(windows))]
+        {
+            let _ = points;
+            Ok(())
+        }
+    }
+
     /// Scroll wheel by delta (positive = up, negative = down).
     pub async fn scroll(delta_y: i32) -> Result<(), String> {
         #[cfg(windows)]

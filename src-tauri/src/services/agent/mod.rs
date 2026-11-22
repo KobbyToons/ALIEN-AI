@@ -8,7 +8,14 @@ use crate::services::obsidian::ObsidianVault;
 use crate::services::CredentialService;
 
 pub mod computer_use;
+pub mod playbooks;
+pub mod ui_automation;
+
 pub use computer_use::ComputerUseEngine;
+#[allow(unused_imports)]
+pub use playbooks::PlaybookManager;
+#[allow(unused_imports)]
+pub use ui_automation::UiAutomationService;
 
 const MAX_AGENT_STEPS: usize = 25;
 
@@ -39,6 +46,10 @@ impl AgentService {
             || p_lower.contains("shopping list")
             || p_lower.contains("computer use")
             || p_lower.contains("agent mode")
+            || p_lower.contains("clip studio")
+            || p_lower.contains("photoshop")
+            || p_lower.contains("blender")
+            || p_lower.contains("unreal")
             || (p_lower.contains("open") && (p_lower.contains("app") || p_lower.contains("browser") || p_lower.contains("search for")))
             || (p_lower.contains("click") && (p_lower.contains("screen") || p_lower.contains("button")));
 
