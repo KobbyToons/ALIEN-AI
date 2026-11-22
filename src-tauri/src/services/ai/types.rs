@@ -32,4 +32,24 @@ impl ModelProvider {
 pub struct ChatMessageInput {
     pub role: String,
     pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image_base64: Option<String>,
+}
+
+impl ChatMessageInput {
+    pub fn new(role: impl Into<String>, content: impl Into<String>) -> Self {
+        Self {
+            role: role.into(),
+            content: content.into(),
+            image_base64: None,
+        }
+    }
+
+    pub fn with_image(role: impl Into<String>, content: impl Into<String>, image_base64: impl Into<String>) -> Self {
+        Self {
+            role: role.into(),
+            content: content.into(),
+            image_base64: Some(image_base64.into()),
+        }
+    }
 }

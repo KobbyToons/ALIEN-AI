@@ -106,10 +106,7 @@ pub async fn model_stream_chat(
             if let Some(sys_msg) = enriched_messages.iter_mut().find(|m| m.role == "system") {
                 sys_msg.content = format!("{}\n\n{}", identity, sys_msg.content);
             } else {
-                enriched_messages.insert(0, ChatMessageInput {
-                    role: "system".into(),
-                    content: identity,
-                });
+                enriched_messages.insert(0, ChatMessageInput::new("system", identity));
             }
         }
     }

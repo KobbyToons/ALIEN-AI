@@ -72,9 +72,34 @@ impl AiProviders {
                         .header("X-Title", "ALIEN Assistant");
                 }
 
+                let messages_json: Vec<serde_json::Value> = messages
+                    .iter()
+                    .map(|m| {
+                        if let Some(ref b64) = m.image_base64 {
+                            let url = if b64.starts_with("data:") {
+                                b64.clone()
+                            } else {
+                                format!("data:image/jpeg;base64,{b64}")
+                            };
+                            json!({
+                                "role": m.role,
+                                "content": [
+                                    { "type": "text", "text": m.content },
+                                    { "type": "image_url", "image_url": { "url": url } }
+                                ]
+                            })
+                        } else {
+                            json!({
+                                "role": m.role,
+                                "content": m.content
+                            })
+                        }
+                    })
+                    .collect();
+
                 let payload = json!({
                     "model": if model.is_empty() { "default" } else { model },
-                    "messages": messages,
+                    "messages": messages_json,
                     "stream": true,
                 });
 
@@ -203,9 +228,19 @@ impl AiProviders {
                         .filter(|m| m.role != "system")
                         .map(|m| {
                             let role = if m.role == "assistant" { "model" } else { "user" };
+                            let mut parts = vec![json!({ "text": m.content })];
+                            if let Some(ref b64) = m.image_base64 {
+                                let raw_b64 = b64.split(',').last().unwrap_or(b64);
+                                parts.push(json!({
+                                    "inline_data": {
+                                        "mime_type": "image/jpeg",
+                                        "data": raw_b64
+                                    }
+                                }));
+                            }
                             json!({
                                 "role": role,
-                                "parts": [{ "text": m.content }]
+                                "parts": parts
                             })
                         })
                         .collect();
@@ -453,10 +488,7 @@ mod tests {
     #[tokio::test]
     async fn test_gemini_stream_chat() {
         let providers = AiProviders::new();
-        let msgs = vec![ChatMessageInput {
-            role: "user".into(),
-            content: "Respond with the word \"ALIEN_ONLINE\" in one line.".into(),
-        }];
+        let msgs = vec![ChatMessageInput::new("user", "Respond with the word \"ALIEN_ONLINE\" in one line.")];
         let mut chunks = Vec::new();
         let res = providers
             .stream_chat(

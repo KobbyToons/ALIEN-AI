@@ -7,7 +7,10 @@ use crate::services::mcp::{McpRegistry, McpToolCall};
 use crate::services::obsidian::ObsidianVault;
 use crate::services::CredentialService;
 
-const MAX_AGENT_STEPS: usize = 8;
+pub mod computer_use;
+pub use computer_use::ComputerUseEngine;
+
+const MAX_AGENT_STEPS: usize = 25;
 
 pub struct AgentService;
 
@@ -24,6 +27,32 @@ impl AgentService {
         let mcp = app.state::<McpRegistry>();
         let vault = app.state::<ObsidianVault>();
         let learning = app.state::<LearningService>();
+
+        // Detect Computer Use / GUI autonomous agent tasks
+        let p_lower = user_prompt.to_lowercase();
+        let is_gui_task = p_lower.contains("open notepad")
+            || p_lower.contains("open chrome")
+            || p_lower.contains("open paint")
+            || p_lower.contains("draw in paint")
+            || p_lower.contains("type into")
+            || p_lower.contains("type in notepad")
+            || p_lower.contains("shopping list")
+            || p_lower.contains("computer use")
+            || p_lower.contains("agent mode")
+            || (p_lower.contains("open") && (p_lower.contains("app") || p_lower.contains("browser") || p_lower.contains("search for")))
+            || (p_lower.contains("click") && (p_lower.contains("screen") || p_lower.contains("button")));
+
+        if is_gui_task {
+            return ComputerUseEngine::run_agent_loop(
+                app,
+                task_id,
+                provider,
+                model,
+                user_prompt,
+                custom_endpoint,
+            )
+            .await;
+        }
 
         let api_key = if provider == ModelProvider::Ollama || provider == ModelProvider::LmStudio {
             None
@@ -71,14 +100,8 @@ impl AgentService {
         );
 
         let mut conversation: Vec<ChatMessageInput> = vec![
-            ChatMessageInput {
-                role: "system".into(),
-                content: system_prompt,
-            },
-            ChatMessageInput {
-                role: "user".into(),
-                content: user_prompt.clone(),
-            },
+            ChatMessageInput::new("system", system_prompt),
+            ChatMessageInput::new("user", user_prompt.clone()),
         ];
 
         let mut step = 0;
@@ -173,14 +196,8 @@ impl AgentService {
                 let result = mcp.execute_tool(&app, tool_call).await;
 
                 // Push tool call and tool result into context
-                conversation.push(ChatMessageInput {
-                    role: "assistant".into(),
-                    content: model_output,
-                });
-                conversation.push(ChatMessageInput {
-                    role: "user".into(),
-                    content: format!("Tool Output:\n{}", result.output),
-                });
+                conversation.push(ChatMessageInput::new("assistant", model_output));
+                conversation.push(ChatMessageInput::new("user", format!("Tool Output:\n{}", result.output)));
             } else {
                 // Done! Assistant responded with final user-facing text
                 final_response = model_output;
