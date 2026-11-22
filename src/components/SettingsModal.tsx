@@ -2,30 +2,42 @@ import { useState, useEffect } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import {
+  addSafetyBlocklistKeyword,
   connectGoogleAccount,
   createVaultTestNote,
   deleteApiKey,
+  getAgentPresence,
   getAuditLog,
+  getComputerUseMetrics,
   getGoogleAccountStatus,
   getKillSwitch,
   getLearningConfig,
+  getSafetyBlocklist,
   getSystemIdentity,
   getThinkingProfile,
   getVaultInfo,
+  getWatchModeStatus,
   hasApiKey,
   listSkills,
   openVaultInExplorer,
   reloadSkills,
+  removeSafetyBlocklistKeyword,
   resetSystemIdentity,
+  restoreSystemCursors,
   saveApiKey,
   saveSystemIdentity,
   setVaultPath,
+  startWatchMode,
+  stopWatchMode,
+  toggleAgentPresence,
   toggleKillSwitch,
+  toggleSafetyBlocklist,
   updateLearningConfig,
 } from "../lib/tauri";
 import type { ActiveModelConfig } from "../hooks/useChat";
 import type {
   AuditEntry,
+  ComputerUseMetrics,
   GoogleAccountStatus,
   LearningConfig,
   LoadedSkill,
@@ -101,8 +113,17 @@ export default function SettingsModal({
   const [autostartEnabled, setAutostartEnabled] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
-    "ai" | "identity" | "skills" | "memory" | "learning" | "voice" | "general" | "audit"
+    "ai" | "computer_use" | "identity" | "skills" | "memory" | "learning" | "voice" | "general" | "audit"
   >("ai");
+
+  // Vision & Computer Use state (Phase H)
+  const [blocklist, setBlocklist] = useState<string[]>([]);
+  const [blocklistInput, setBlocklistInput] = useState("");
+  const [blocklistEnabled, setBlocklistEnabled] = useState(true);
+  const [metrics, setMetrics] = useState<ComputerUseMetrics | null>(null);
+  const [cursorRestoreMsg, setCursorRestoreMsg] = useState<string | null>(null);
+  const [isOverlayActive, setIsOverlayActive] = useState(false);
+  const [isWatchActive, setIsWatchActive] = useState(false);
 
   // AI Identity & Foundation Manual state
   const [systemIdentity, setSystemIdentity] = useState("");
@@ -154,6 +175,11 @@ export default function SettingsModal({
       }).catch(() => {});
 
       setKeysConfigured((prev) => ({ ...prev, lmstudio: true, ollama: true }));
+
+      getSafetyBlocklist().then(setBlocklist).catch(() => {});
+      getComputerUseMetrics().then(setMetrics).catch(() => {});
+      getAgentPresence().then(setIsOverlayActive).catch(() => {});
+      getWatchModeStatus().then(setIsWatchActive).catch(() => {});
 
       PROVIDERS.forEach(async (p) => {
         if (p.id !== "ollama" && p.id !== "lmstudio") {
@@ -400,6 +426,7 @@ export default function SettingsModal({
         {(
           [
             ["ai", "Brain"],
+            ["computer_use", "Vision & PC Control"],
             ["identity", "Identity Manual"],
             ["skills", `Skills (${skills.length})`],
             ["memory", "Memory"],
@@ -695,6 +722,251 @@ export default function SettingsModal({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "computer_use" && (
+          <div className="space-y-3">
+            {/* 1. Operating Modes Overview */}
+            <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-red-950/80 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-neutral-100 flex items-center gap-1.5">
+                  <span className="text-red-500 text-sm">👁️</span>
+                  Vision & Operating Modes
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-neutral-900 border border-red-900/40 text-red-400">
+                  Per-Monitor DPI V2
+                </span>
+              </div>
+              <p className="text-[10px] text-neutral-400 leading-relaxed">
+                ALIEN can visually observe your screen on demand and visibly operate desktop software with real mouse & keyboard input.
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="p-2.5 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-cyan-400 flex items-center gap-1">
+                      👁️ WATCH Mode
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${isWatchActive ? "bg-cyan-900/60 text-cyan-200" : "bg-neutral-800 text-neutral-400"}`}>
+                      {isWatchActive ? "ACTIVE" : "OFF"}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-neutral-400">
+                    Continuous ~1 fps visual observation stored in a 10-frame RAM ring buffer.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      if (isWatchActive) {
+                        await stopWatchMode();
+                        setIsWatchActive(false);
+                      } else {
+                        await startWatchMode();
+                        setIsWatchActive(true);
+                      }
+                    }}
+                    className={`w-full mt-1.5 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${
+                      isWatchActive
+                        ? "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
+                        : "bg-cyan-700 hover:bg-cyan-600 text-white"
+                    }`}
+                  >
+                    {isWatchActive ? "Stop Watch Mode" : "Start Watch Mode"}
+                  </button>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-red-400 flex items-center gap-1">
+                      🔴 AGENT Presence
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-semibold ${isOverlayActive ? "bg-red-900/60 text-red-200" : "bg-neutral-800 text-neutral-400"}`}>
+                      {isOverlayActive ? "VISIBLE" : "OFF"}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-neutral-400">
+                    Subtle red edge glow on all borders & red cursor. Excluded from screenshots.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      const next = !isOverlayActive;
+                      await toggleAgentPresence(next);
+                      setIsOverlayActive(next);
+                    }}
+                    className={`w-full mt-1.5 py-1 px-2 rounded-lg text-[10px] font-bold transition-all ${
+                      isOverlayActive
+                        ? "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
+                        : "bg-red-700 hover:bg-red-600 text-white"
+                    }`}
+                  >
+                    {isOverlayActive ? "Hide Overlay & Cursor" : "Test Red Glow & Cursor"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Safety & Privacy Blocklist */}
+            <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-red-950/80 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-neutral-100 flex items-center gap-1.5">
+                  <span className="text-amber-500 text-sm">🛡️</span>
+                  Privacy & Application Blocklist
+                </span>
+                <button
+                  onClick={async () => {
+                    const next = !blocklistEnabled;
+                    await toggleSafetyBlocklist(next);
+                    setBlocklistEnabled(next);
+                  }}
+                  className={`px-2 py-0.5 rounded-full text-[9px] font-bold transition-colors ${
+                    blocklistEnabled
+                      ? "bg-amber-950/60 border border-amber-600/40 text-amber-300"
+                      : "bg-neutral-800 text-neutral-400"
+                  }`}
+                >
+                  {blocklistEnabled ? "Active & Enforced" : "Disabled"}
+                </button>
+              </div>
+              <p className="text-[10px] text-neutral-400 leading-relaxed">
+                ALIEN automatically pauses and excludes capture whenever windows or tabs matching these keywords gain focus (password managers, banking sites, secure dialogs).
+              </p>
+
+              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto chat-scroll p-1.5 rounded-xl bg-neutral-950/60 border border-neutral-800">
+                {blocklist.map((kw) => (
+                  <span
+                    key={kw}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-neutral-900 border border-neutral-700/60 text-neutral-300"
+                  >
+                    {kw}
+                    <button
+                      onClick={async () => {
+                        const updated = await removeSafetyBlocklistKeyword(kw);
+                        setBlocklist(updated);
+                      }}
+                      className="text-neutral-500 hover:text-red-400 font-bold text-[9px] ml-0.5"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Add keyword (e.g. 1password, bank)..."
+                  value={blocklistInput}
+                  onChange={(e) => setBlocklistInput(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter" && blocklistInput.trim()) {
+                      const updated = await addSafetyBlocklistKeyword(blocklistInput.trim());
+                      setBlocklist(updated);
+                      setBlocklistInput("");
+                    }
+                  }}
+                  className="flex-1 px-2.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-red-600"
+                />
+                <button
+                  onClick={async () => {
+                    if (blocklistInput.trim()) {
+                      const updated = await addSafetyBlocklistKeyword(blocklistInput.trim());
+                      setBlocklist(updated);
+                      setBlocklistInput("");
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-[10px] transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Crash-Safe Cursor Recovery & Hardware Kill Switch */}
+            <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-red-950/80 space-y-2.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-neutral-100 flex items-center gap-1.5">
+                  <span className="text-red-500 text-sm">🛑</span>
+                  Safety Controls & Cursor Rescue
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-neutral-900 border border-neutral-700 text-neutral-300">
+                  Global Hook Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="p-2 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 font-semibold block">Kill Switch Hotkey</span>
+                  <span className="text-red-400 font-mono font-bold text-[11px]">Ctrl + Shift + F12</span>
+                  <p className="text-[9px] text-neutral-500">Hardware abort hook: instantly terminates PC takeover and resets cursor.</p>
+                </div>
+                <div className="p-2 rounded-xl bg-neutral-900/60 border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 font-semibold block">Hardware Takeover</span>
+                  <span className="text-emerald-400 font-mono font-bold text-[11px]">Physical Mouse / Key</span>
+                  <p className="text-[9px] text-neutral-500">Touching your physical mouse instantly yields control back to you.</p>
+                </div>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  onClick={async () => {
+                    try {
+                      const msg = await restoreSystemCursors();
+                      setCursorRestoreMsg(msg);
+                      setIsOverlayActive(false);
+                      setTimeout(() => setCursorRestoreMsg(null), 3000);
+                    } catch (e: any) {
+                      setCursorRestoreMsg(`Error: ${e?.message || e}`);
+                    }
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-200 font-semibold text-[11px] transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>🔄</span>
+                  Restore Default System Cursors
+                </button>
+                {cursorRestoreMsg && (
+                  <p className="text-[10px] text-center text-emerald-400 font-medium pt-1">
+                    {cursorRestoreMsg}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* 4. Live Telemetry & Cost Display */}
+            <div className="p-3.5 rounded-2xl bg-[#0c0c0e] border border-red-950/80 space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-neutral-100 flex items-center gap-1.5">
+                  <span className="text-emerald-500 text-sm">📊</span>
+                  Session Telemetry & Cost
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-neutral-900 border border-emerald-900/40 text-emerald-400">
+                  Zero Telemetry
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1.5 pt-1 text-center">
+                <div className="p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
+                  <span className="text-[9px] text-neutral-400 block font-medium">Steps</span>
+                  <span className="text-xs font-bold text-neutral-100">{metrics?.total_steps ?? 0}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
+                  <span className="text-[9px] text-neutral-400 block font-medium">Frames</span>
+                  <span className="text-xs font-bold text-neutral-100">{metrics?.total_frames ?? 0}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
+                  <span className="text-[9px] text-neutral-400 block font-medium">Tokens</span>
+                  <span className="text-xs font-bold text-cyan-400">~{metrics?.estimated_tokens.toLocaleString() ?? 0}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-neutral-900/60 border border-neutral-800">
+                  <span className="text-[9px] text-neutral-400 block font-medium">Est. Cost</span>
+                  <span className="text-xs font-bold text-emerald-400">${metrics?.estimated_cost_usd?.toFixed(4) ?? "0.0000"}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[9px] text-neutral-400 pt-1 border-t border-neutral-900">
+                <span>Avg Latency: <strong className="text-neutral-300">{metrics?.average_step_ms ?? 0} ms/step</strong></span>
+                <span>Provider: <strong className="text-red-400">{metrics?.provider || "Google Gemini"}</strong></span>
+              </div>
+            </div>
           </div>
         )}
 

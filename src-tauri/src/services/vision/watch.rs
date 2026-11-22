@@ -66,6 +66,15 @@ impl WatchModeService {
             let mut last_hash: u64 = 0;
 
             while is_active.load(Ordering::SeqCst) {
+                // Safety check: Never capture blocklisted sensitive windows
+                if let Some(safety) = app_handle.try_state::<crate::services::agent::safety::SafetyBlocklistService>() {
+                    let active_title = crate::services::learning::learn_mode::get_active_window_title();
+                    if safety.check_window_safety(&active_title).is_err() {
+                        sleep(Duration::from_millis(1000)).await;
+                        continue;
+                    }
+                }
+
                 // Capture frame in blocking thread pool
                 let frame_res = tokio::task::spawn_blocking(|| {
                     vision::capture_monitor_base64(None, Some(1280))

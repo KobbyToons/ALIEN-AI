@@ -18,3 +18,10 @@ pub fn get_agent_presence(app: AppHandle) -> bool {
     let service = app.state::<OverlayService>();
     service.is_active()
 }
+
+/// Crash-safe rescue command: manually restore default system cursors.
+#[tauri::command]
+pub fn restore_system_cursors() -> Result<String, String> {
+    crate::services::overlay::cursor::restore_default_cursors();
+    Ok("Default Windows system cursors successfully restored.".into())
+}

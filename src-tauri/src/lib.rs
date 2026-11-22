@@ -117,6 +117,8 @@ pub fn run() {
             app.manage(services::OverlayService::new());
             app.manage(services::input::InputService::new());
             app.manage(services::vision::WatchModeService::new());
+            app.manage(services::agent::SafetyBlocklistService::new());
+            app.manage(services::agent::AgentMetricsService::new());
 
             let skill_loader = SkillLoader::new(app_data);
             let _ = skill_loader.reload();
@@ -198,6 +200,13 @@ pub fn run() {
             commands::stop_watch_mode,
             commands::get_watch_mode_status,
             commands::describe_screen,
+            commands::get_safety_blocklist,
+            commands::add_safety_blocklist_keyword,
+            commands::remove_safety_blocklist_keyword,
+            commands::toggle_safety_blocklist,
+            commands::get_computer_use_metrics,
+            commands::reset_computer_use_metrics,
+            commands::restore_system_cursors,
         ])
         // ── Launch ───────────────────────────────────────────────
         .run(tauri::generate_context!())

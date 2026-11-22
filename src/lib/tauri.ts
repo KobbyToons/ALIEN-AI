@@ -350,6 +350,45 @@ export async function getLearnModeStatus(): Promise<boolean> {
   return invoke<boolean>("get_learn_mode_status");
 }
 
+// ── Polish, Safety & Metrics (Phase H) ───────────────────────────────────────
+
+export interface ComputerUseMetrics {
+  total_steps: number;
+  total_frames: number;
+  estimated_tokens: number;
+  estimated_cost_usd: number;
+  average_step_ms: number;
+  provider: string;
+}
+
+export async function getSafetyBlocklist(): Promise<string[]> {
+  return invoke<string[]>("get_safety_blocklist");
+}
+
+export async function addSafetyBlocklistKeyword(keyword: string): Promise<string[]> {
+  return invoke<string[]>("add_safety_blocklist_keyword", { keyword });
+}
+
+export async function removeSafetyBlocklistKeyword(keyword: string): Promise<string[]> {
+  return invoke<string[]>("remove_safety_blocklist_keyword", { keyword });
+}
+
+export async function toggleSafetyBlocklist(enabled: boolean): Promise<boolean> {
+  return invoke<boolean>("toggle_safety_blocklist", { enabled });
+}
+
+export async function getComputerUseMetrics(): Promise<ComputerUseMetrics | null> {
+  return invoke<ComputerUseMetrics | null>("get_computer_use_metrics");
+}
+
+export async function resetComputerUseMetrics(): Promise<void> {
+  return invoke<void>("reset_computer_use_metrics");
+}
+
+export async function restoreSystemCursors(): Promise<string> {
+  return invoke<string>("restore_system_cursors");
+}
+
 
 
 

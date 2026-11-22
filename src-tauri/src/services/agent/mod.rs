@@ -8,12 +8,16 @@ use crate::services::obsidian::ObsidianVault;
 use crate::services::CredentialService;
 
 pub mod computer_use;
+pub mod metrics;
 pub mod playbooks;
+pub mod safety;
 pub mod ui_automation;
 
 pub use computer_use::ComputerUseEngine;
+pub use metrics::AgentMetricsService;
 #[allow(unused_imports)]
 pub use playbooks::PlaybookManager;
+pub use safety::SafetyBlocklistService;
 #[allow(unused_imports)]
 pub use ui_automation::UiAutomationService;
 

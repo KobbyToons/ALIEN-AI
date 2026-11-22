@@ -48,6 +48,15 @@ export interface AgentStepEvent {
   description: string;
 }
 
+export interface ComputerUseMetrics {
+  total_steps: number;
+  total_frames: number;
+  estimated_tokens: number;
+  estimated_cost_usd: number;
+  average_step_ms: number;
+  provider: string;
+}
+
 export interface VoiceConfig {
   autoSpeak: boolean;
   voiceName: string;

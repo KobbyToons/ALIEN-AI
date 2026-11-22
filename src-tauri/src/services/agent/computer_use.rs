@@ -83,6 +83,14 @@ impl ComputerUseEngine {
         )
         .await?;
 
+        // 1.5 ── Safety Blocklist check for active foreground window
+        if let Some(safety) = app.try_state::<crate::services::agent::safety::SafetyBlocklistService>() {
+            let active_win = crate::services::learning::learn_mode::get_active_window_title();
+            if let Err(reason) = safety.check_window_safety(&active_win) {
+                return Ok(format!("🛡️ {reason}"));
+            }
+        }
+
         // 2 ── Activate Visual Presence (Red Glow + Red Cursor)
         let _ = overlay.set_presence(&app, true);
 
@@ -178,6 +186,8 @@ impl ComputerUseEngine {
         ];
 
         while step < MAX_COMPUTER_USE_STEPS {
+            let step_start_time = std::time::Instant::now();
+
             // Check cancellation or kill switch or takeover
             if let Some(cm) = app.try_state::<crate::services::CancellationManager>() {
                 if cm.is_cancelled(&task_id) {
@@ -192,6 +202,15 @@ impl ComputerUseEngine {
             if is_takeover_triggered() {
                 let _ = overlay.set_presence(&app, false);
                 return Ok("✋ User physical takeover detected. Control yielded to user.".into());
+            }
+
+            // Continuous Safety Blocklist check
+            if let Some(safety) = app.try_state::<crate::services::agent::safety::SafetyBlocklistService>() {
+                let current_win = crate::services::learning::learn_mode::get_active_window_title();
+                if let Err(reason) = safety.check_window_safety(&current_win) {
+                    let _ = overlay.set_presence(&app, false);
+                    return Ok(format!("🛡️ Agent paused: {}", reason));
+                }
             }
 
             step += 1;
@@ -431,6 +450,15 @@ impl ComputerUseEngine {
 
             // Settle pause to let GUI update
             sleep(Duration::from_millis(350)).await;
+
+            // Record performance & cost metrics
+            if let Some(metrics) = app.try_state::<crate::services::agent::metrics::AgentMetricsService>() {
+                metrics.record_step(
+                    step_start_time.elapsed().as_millis() as u64,
+                    true,
+                    model_response.len() + 600,
+                );
+            }
 
             // Record action in conversation history
             conversation.push(ChatMessageInput::new("assistant", model_response));
