@@ -309,6 +309,27 @@ impl McpRegistry {
                         "required": ["delta_y"]
                     }),
                 },
+                // ── Phase E: Watch Mode (Continuous Vision) ───────────────────
+                McpTool {
+                    name: "start_watch_mode".into(),
+                    description: "Start continuous background observation of the user's screen in Watch Mode (~1 fps, observational only).".into(),
+                    input_schema: json!({ "type": "object", "properties": {} }),
+                },
+                McpTool {
+                    name: "stop_watch_mode".into(),
+                    description: "Stop continuous observation of the user's screen in Watch Mode.".into(),
+                    input_schema: json!({ "type": "object", "properties": {} }),
+                },
+                McpTool {
+                    name: "describe_screen".into(),
+                    description: "Examine what the user is currently doing on screen or what content/application is open, and explain it.".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "prompt": { "type": "string", "description": "Optional specific question about the screen" }
+                        }
+                    }),
+                },
             ],
         }
     }
@@ -511,6 +532,17 @@ impl McpRegistry {
             "input_scroll" => {
                 let delta = call.arguments.get("delta_y").and_then(|v| v.as_i64()).unwrap_or(-2) as i32;
                 crate::commands::input_scroll(delta).await.map(|_| format!("Scrolled wheel by delta {delta}."))
+            }
+            // ── Phase E: Watch Mode (Continuous Vision) ───────────────────
+            "start_watch_mode" => {
+                crate::commands::start_watch_mode(app.clone()).map(|_| "Watch mode activated. I am now observing your screen in the background.".into())
+            }
+            "stop_watch_mode" => {
+                crate::commands::stop_watch_mode(app.clone()).map(|_| "Watch mode stopped.".into())
+            }
+            "describe_screen" => {
+                let prompt = call.arguments.get("prompt").and_then(|v| v.as_str()).map(|s| s.to_string());
+                crate::commands::describe_screen(app.clone(), prompt).await
             }
             _ => {
                 // Check if tool is provided by any loaded custom Skill (Blender, Discord, Clip Studio, etc.)

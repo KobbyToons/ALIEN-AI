@@ -8,6 +8,9 @@
 
 use xcap::Monitor;
 
+pub mod watch;
+pub use watch::WatchModeService;
+
 /// Metadata about a single physical display.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct MonitorInfo {

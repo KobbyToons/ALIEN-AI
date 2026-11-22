@@ -30,6 +30,10 @@ function isAutonomousTask(text: string): boolean {
   const actionTriggers = [
     /\b(look at|see|capture|take a look at|check|inspect|view)\s+(my\s+)?(screen|display|monitor|window)\b/i,
     /\b(what('?s| is)\s+(on|showing on)\s+(my\s+)?(screen|display|monitor))\b/i,
+    /\b(what am i (doing|working on|watching))\b/i,
+    /\b(describe\s+(my\s+)?(screen|what i am doing|what's on my screen))\b/i,
+    /\b(start|stop|turn on|turn off)\s+(watching|watch mode)\b/i,
+    /\b(watch my screen)\b/i,
     /\b(screenshot|screen capture)\b/i,
     /\b(turn (on|off)|toggle|test)\s+(the\s+)?(agent presence|red glow|red cursor|presence test)\b/i,
     /\b(move|click|drag|scroll|type|hotkey|draw|press key|test hands)\b/i,

@@ -114,6 +114,7 @@ pub fn run() {
             app.manage(services::CancellationManager::new());
             app.manage(services::OverlayService::new());
             app.manage(services::input::InputService::new());
+            app.manage(services::vision::WatchModeService::new());
 
             let skill_loader = SkillLoader::new(app_data);
             let _ = skill_loader.reload();
@@ -188,6 +189,10 @@ pub fn run() {
             commands::clear_takeover_status,
             commands::emergency_kill_switch,
             commands::reset_emergency_kill_switch,
+            commands::start_watch_mode,
+            commands::stop_watch_mode,
+            commands::get_watch_mode_status,
+            commands::describe_screen,
         ])
         // ── Launch ───────────────────────────────────────────────
         .run(tauri::generate_context!())

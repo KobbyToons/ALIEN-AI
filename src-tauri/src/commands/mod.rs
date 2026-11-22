@@ -11,6 +11,7 @@ pub mod process;
 pub mod shell;
 pub mod skills;
 pub mod system;
+pub mod watch;
 
 pub use agent::*;
 pub use ai::*;
@@ -25,6 +26,7 @@ pub use process::*;
 pub use shell::*;
 pub use skills::*;
 pub use system::*;
+pub use watch::*;
 
 /// Simple ping command — confirms the Rust backend is alive.
 #[tauri::command]

@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { getWatchModeStatus } from "../lib/tauri";
 import type { BuddyState } from "../types";
 import alienLogo from "../assets/alien-logo.png";
 
@@ -49,6 +52,18 @@ export default function BuddyOrb({
   onContextMenu,
   isHoldingVoice = false,
 }: BuddyOrbProps) {
+  const [watchModeActive, setWatchModeActive] = useState(false);
+
+  useEffect(() => {
+    getWatchModeStatus().then(setWatchModeActive).catch(() => {});
+    const unlistenPromise = listen<{ active: boolean }>("buddy://watch-mode-state", (event) => {
+      setWatchModeActive(event.payload.active);
+    });
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
   const px =
     size === "lg" ? "w-28 h-28" : size === "md" ? "w-16 h-16" : "w-9 h-9";
 
@@ -91,6 +106,16 @@ export default function BuddyOrb({
       }
       aria-label={`ALIEN is ${effectiveState}. Click to toggle voice mode, hold to speak, double click for chat.`}
     >
+      {/* ── Watch Mode Eye Indicator Badge ── */}
+      {watchModeActive && (
+        <div
+          className="absolute -top-1 -right-1 z-30 flex items-center justify-center w-6 h-6 rounded-full bg-[#050d18] border border-cyan-400/90 text-cyan-300 text-xs shadow-[0_0_10px_rgba(34,211,238,0.6)] animate-pulse"
+          title="Watch Mode: ALIEN is observing your screen"
+        >
+          👁️
+        </div>
+      )}
+
       {/* ── Red Glowy Particle Effects (drifting behind ALIEN when in orb mode) ── */}
       {isOrbMode && (
         <div className="absolute -inset-6 pointer-events-none -z-20 overflow-visible">

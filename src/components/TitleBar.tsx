@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getKillSwitch } from "../lib/tauri";
+import { listen } from "@tauri-apps/api/event";
+import { getKillSwitch, getWatchModeStatus } from "../lib/tauri";
 
 interface TitleBarProps {
   onOpenSettings: () => void;
@@ -13,14 +14,24 @@ interface TitleBarProps {
  */
 export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) {
   const [killSwitchActive, setKillSwitchActive] = useState(false);
+  const [watchModeActive, setWatchModeActive] = useState(false);
 
   useEffect(() => {
     const check = () => {
       getKillSwitch().then(setKillSwitchActive).catch(() => {});
+      getWatchModeStatus().then(setWatchModeActive).catch(() => {});
     };
     check();
-    const interval = setInterval(check, 2000);
-    return () => clearInterval(interval);
+    const interval = setInterval(check, 2500);
+
+    const unlistenPromise = listen<{ active: boolean }>("buddy://watch-mode-state", (event) => {
+      setWatchModeActive(event.payload.active);
+    });
+
+    return () => {
+      clearInterval(interval);
+      unlistenPromise.then((unlisten) => unlisten());
+    };
   }, []);
 
   const handleMinimize = async () => {
@@ -46,6 +57,14 @@ export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) 
         <span data-tauri-drag-region className="text-red-500 font-black tracking-widest drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]">
           ALIEN
         </span>
+        {watchModeActive && (
+          <span
+            className="bg-cyan-950/80 border border-cyan-500/70 text-cyan-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm shadow-cyan-500/30"
+            title="Watch Mode Active (Observing screen)"
+          >
+            <span className="animate-pulse text-[10px]">👁️</span> WATCHING
+          </span>
+        )}
         {killSwitchActive && (
           <span className="bg-red-600 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold animate-pulse shadow-sm shadow-red-600/40">
             KILL SWITCH

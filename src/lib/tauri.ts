@@ -318,5 +318,24 @@ export async function resetEmergencyKillSwitch(): Promise<void> {
   return invoke<void>("reset_emergency_kill_switch");
 }
 
+// ── Watch Mode: Continuous Vision (Phase E) ──────────────────────────────────
+
+export async function startWatchMode(): Promise<void> {
+  return invoke<void>("start_watch_mode");
+}
+
+export async function stopWatchMode(): Promise<void> {
+  return invoke<void>("stop_watch_mode");
+}
+
+export async function getWatchModeStatus(): Promise<boolean> {
+  return invoke<boolean>("get_watch_mode_status");
+}
+
+export async function describeScreen(prompt?: string): Promise<string> {
+  return invoke<string>("describe_screen", { prompt: prompt ?? null });
+}
+
+
 
 
