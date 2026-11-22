@@ -272,4 +272,51 @@ export async function getAgentPresence(): Promise<boolean> {
   return invoke<boolean>("get_agent_presence");
 }
 
+// ── Hands: Input Injection & Takeover (Phase C) ──────────────────────────────
+
+export async function inputMove(x: number, y: number): Promise<void> {
+  return invoke<void>("input_move", { x, y });
+}
+
+export async function inputClick(button?: "left" | "right" | "middle" | "double"): Promise<void> {
+  return invoke<void>("input_click", { button: button ?? null });
+}
+
+export async function inputDrag(x1: number, y1: number, x2: number, y2: number): Promise<void> {
+  return invoke<void>("input_drag", { x1, y1, x2, y2 });
+}
+
+export async function inputScroll(deltaY: number): Promise<void> {
+  return invoke<void>("input_scroll", { deltaY });
+}
+
+export async function inputType(text: string): Promise<void> {
+  return invoke<void>("input_type", { text });
+}
+
+export async function inputPressKey(key: string): Promise<void> {
+  return invoke<void>("input_press_key", { key });
+}
+
+export async function inputHotkey(combo: string): Promise<void> {
+  return invoke<void>("input_hotkey", { combo });
+}
+
+export async function checkTakeoverStatus(): Promise<boolean> {
+  return invoke<boolean>("check_takeover_status");
+}
+
+export async function clearTakeoverStatus(): Promise<void> {
+  return invoke<void>("clear_takeover_status");
+}
+
+export async function emergencyKillSwitch(): Promise<void> {
+  return invoke<void>("emergency_kill_switch");
+}
+
+export async function resetEmergencyKillSwitch(): Promise<void> {
+  return invoke<void>("reset_emergency_kill_switch");
+}
+
+
 

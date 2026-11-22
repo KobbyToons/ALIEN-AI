@@ -2,6 +2,7 @@ pub mod agent;
 pub mod ai;
 pub mod cancellation;
 pub mod credentials;
+pub mod input;
 pub mod learning;
 pub mod mcp;
 pub mod obsidian;

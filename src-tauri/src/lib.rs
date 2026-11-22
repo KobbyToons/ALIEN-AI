@@ -52,7 +52,12 @@ pub fn run() {
                 .with_handler(|app, shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
                         let voice_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::Backquote);
-                        if shortcut == &voice_shortcut {
+                        let kill_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::F12);
+
+                        if shortcut == &kill_shortcut {
+                            // Global Emergency Kill Switch (Ctrl+Shift+F12)
+                            services::input::trigger_kill_switch(Some(app));
+                        } else if shortcut == &voice_shortcut {
                             // Instant voice shortcut: unhide window and start voice transcribing
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.unminimize();
@@ -76,6 +81,10 @@ pub fn run() {
             // Register Ctrl+` (Ctrl+Backquote) as the instant voice shortcut
             let voice_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::Backquote);
             let _ = app.global_shortcut().register(voice_shortcut);
+
+            // Register Ctrl+Shift+F12 as the global emergency kill switch
+            let kill_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::F12);
+            let _ = app.global_shortcut().register(kill_shortcut);
 
             // Create the system-tray icon with right-click menu
             tray::create_tray(app.handle())?;
@@ -104,6 +113,7 @@ pub fn run() {
             app.manage(LearningService::new());
             app.manage(services::CancellationManager::new());
             app.manage(services::OverlayService::new());
+            app.manage(services::input::InputService::new());
 
             let skill_loader = SkillLoader::new(app_data);
             let _ = skill_loader.reload();
@@ -167,6 +177,17 @@ pub fn run() {
             commands::capture_screen,
             commands::toggle_agent_presence,
             commands::get_agent_presence,
+            commands::input_move,
+            commands::input_click,
+            commands::input_drag,
+            commands::input_scroll,
+            commands::input_type,
+            commands::input_press_key,
+            commands::input_hotkey,
+            commands::check_takeover_status,
+            commands::clear_takeover_status,
+            commands::emergency_kill_switch,
+            commands::reset_emergency_kill_switch,
         ])
         // ── Launch ───────────────────────────────────────────────
         .run(tauri::generate_context!())

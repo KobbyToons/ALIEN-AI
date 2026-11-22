@@ -32,6 +32,8 @@ function isAutonomousTask(text: string): boolean {
     /\b(what('?s| is)\s+(on|showing on)\s+(my\s+)?(screen|display|monitor))\b/i,
     /\b(screenshot|screen capture)\b/i,
     /\b(turn (on|off)|toggle|test)\s+(the\s+)?(agent presence|red glow|red cursor|presence test)\b/i,
+    /\b(move|click|drag|scroll|type|hotkey|draw|press key|test hands)\b/i,
+    /\b(notepad|paint|canvas|cursor|mouse|keyboard)\b/i,
     /\b(create|make|write|generate)\s+(a\s+)?(file|script|note|folder|document|app|program)\b/i,
     /\b(delete|remove|erase|clear)\s+(the\s+)?(file|folder|cache)\b/i,
     /\b(run|execute|launch|start|open)\s+(the\s+)?(terminal|powershell|cmd|app|script|process|browser)\b/i,

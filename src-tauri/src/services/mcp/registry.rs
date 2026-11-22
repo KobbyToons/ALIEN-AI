@@ -239,6 +239,76 @@ impl McpRegistry {
                         "required": ["active"]
                     }),
                 },
+                // ── Phase C: Hands (Input Injection) ──────────────────────────
+                McpTool {
+                    name: "input_move".into(),
+                    description: "Move the mouse cursor smoothly along an eased curve to physical screen coordinates (x, y).".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "x": { "type": "integer", "description": "Physical X coordinate on the virtual desktop" },
+                            "y": { "type": "integer", "description": "Physical Y coordinate on the virtual desktop" }
+                        },
+                        "required": ["x", "y"]
+                    }),
+                },
+                McpTool {
+                    name: "input_click".into(),
+                    description: "Click the mouse at its current position. Supports 'left', 'right', 'middle', or 'double' click.".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "button": { "type": "string", "enum": ["left", "right", "middle", "double"], "description": "Mouse button to click (default left)" }
+                        }
+                    }),
+                },
+                McpTool {
+                    name: "input_drag".into(),
+                    description: "Click and drag smoothly from (x1, y1) to (x2, y2). Useful for drawing in Paint or selecting text/canvas.".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "x1": { "type": "integer", "description": "Start physical X" },
+                            "y1": { "type": "integer", "description": "Start physical Y" },
+                            "x2": { "type": "integer", "description": "End physical X" },
+                            "y2": { "type": "integer", "description": "End physical Y" }
+                        },
+                        "required": ["x1", "y1", "x2", "y2"]
+                    }),
+                },
+                McpTool {
+                    name: "input_type".into(),
+                    description: "Type text into the currently focused window using natural human typing pacing and full Unicode support.".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "text": { "type": "string", "description": "Text to type" }
+                        },
+                        "required": ["text"]
+                    }),
+                },
+                McpTool {
+                    name: "input_hotkey".into(),
+                    description: "Press a keyboard hotkey combination (e.g. 'ctrl+s', 'alt+f4', 'ctrl+shift+esc', 'enter').".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "combo": { "type": "string", "description": "Hotkey string separated by '+' like 'ctrl+s' or single key like 'enter'" }
+                        },
+                        "required": ["combo"]
+                    }),
+                },
+                McpTool {
+                    name: "input_scroll".into(),
+                    description: "Scroll the mouse wheel (positive = up, negative = down).".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "delta_y": { "type": "integer", "description": "Scroll delta (e.g. -3 for down, 3 for up)" }
+                        },
+                        "required": ["delta_y"]
+                    }),
+                },
             ],
         }
     }
@@ -412,6 +482,35 @@ impl McpRegistry {
                         "Agent presence deactivated: Overlays hidden and standard system cursor restored.".into()
                     }
                 })
+            }
+            // ── Phase C: Hands (Input Injection) ──────────────────────────
+            "input_move" => {
+                let x = call.arguments.get("x").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                let y = call.arguments.get("y").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                crate::commands::input_move(x, y).await.map(|_| format!("Moved cursor smoothly to ({x}, {y})."))
+            }
+            "input_click" => {
+                let button = call.arguments.get("button").and_then(|v| v.as_str()).map(|s| s.to_string());
+                crate::commands::input_click(button.clone()).await.map(|_| format!("Clicked {} mouse button.", button.as_deref().unwrap_or("left")))
+            }
+            "input_drag" => {
+                let x1 = call.arguments.get("x1").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                let y1 = call.arguments.get("y1").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                let x2 = call.arguments.get("x2").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                let y2 = call.arguments.get("y2").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                crate::commands::input_drag(x1, y1, x2, y2).await.map(|_| format!("Dragged from ({x1}, {y1}) to ({x2}, {y2})."))
+            }
+            "input_type" => {
+                let text = call.arguments.get("text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                crate::commands::input_type(text.clone()).await.map(|_| format!("Typed: '{text}'"))
+            }
+            "input_hotkey" => {
+                let combo = call.arguments.get("combo").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                crate::commands::input_hotkey(combo.clone()).await.map(|_| format!("Pressed hotkey combo: '{combo}'"))
+            }
+            "input_scroll" => {
+                let delta = call.arguments.get("delta_y").and_then(|v| v.as_i64()).unwrap_or(-2) as i32;
+                crate::commands::input_scroll(delta).await.map(|_| format!("Scrolled wheel by delta {delta}."))
             }
             _ => {
                 // Check if tool is provided by any loaded custom Skill (Blender, Discord, Clip Studio, etc.)
