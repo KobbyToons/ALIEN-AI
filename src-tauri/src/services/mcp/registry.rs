@@ -330,6 +330,23 @@ impl McpRegistry {
                         }
                     }),
                 },
+                // ── Phase F: Learn Mode (Workflow Recording) ──────────────────
+                McpTool {
+                    name: "learn_start".into(),
+                    description: "Start recording a user workflow demonstration in Learn Mode ('Watch how I do this').".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "name": { "type": "string", "description": "Name or title of the workflow being taught" }
+                        },
+                        "required": ["name"]
+                    }),
+                },
+                McpTool {
+                    name: "learn_finish".into(),
+                    description: "Finish recording the user workflow demonstration, synthesize into Obsidian, and offer replay.".into(),
+                    input_schema: json!({ "type": "object", "properties": {} }),
+                },
             ],
         }
     }
@@ -543,6 +560,16 @@ impl McpRegistry {
             "describe_screen" => {
                 let prompt = call.arguments.get("prompt").and_then(|v| v.as_str()).map(|s| s.to_string());
                 crate::commands::describe_screen(app.clone(), prompt).await
+            }
+            // ── Phase F: Learn Mode ───────────────────────────────────────
+            "learn_start" => {
+                let name = call.arguments.get("name").and_then(|v| v.as_str()).unwrap_or("Custom Workflow").to_string();
+                crate::commands::start_learn_mode(app.clone(), name.clone()).await.map(|_| {
+                    format!("Learn Mode started for: '{name}'. Perform your actions on screen, and let me know when you're done!")
+                })
+            }
+            "learn_finish" => {
+                crate::commands::stop_learn_mode(app.clone()).await
             }
             _ => {
                 // Check if tool is provided by any loaded custom Skill (Blender, Discord, Clip Studio, etc.)

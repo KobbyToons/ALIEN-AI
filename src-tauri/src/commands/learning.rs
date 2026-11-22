@@ -36,3 +36,33 @@ pub fn get_thinking_profile(
     learning.get_thinking_profile(&vault)
 }
 
+// ── Learn Mode: "Watch how I do this" (Phase F) ──────────────────────────────
+
+#[tauri::command]
+pub async fn start_learn_mode(
+    app: tauri::AppHandle,
+    name: String,
+) -> Result<(), String> {
+    use tauri::Manager;
+    let service = app.state::<crate::services::learning::LearnModeService>();
+    service.start_session(name, &app).await
+}
+
+#[tauri::command]
+pub async fn stop_learn_mode(
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    use tauri::Manager;
+    let service = app.state::<crate::services::learning::LearnModeService>();
+    service.stop_session(&app).await
+}
+
+#[tauri::command]
+pub fn get_learn_mode_status(
+    app: tauri::AppHandle,
+) -> bool {
+    use tauri::Manager;
+    let service = app.state::<crate::services::learning::LearnModeService>();
+    service.is_active()
+}
+

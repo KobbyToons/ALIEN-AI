@@ -15,6 +15,7 @@ interface TitleBarProps {
 export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) {
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [watchModeActive, setWatchModeActive] = useState(false);
+  const [learnSessionName, setLearnSessionName] = useState<string | null>(null);
 
   useEffect(() => {
     const check = () => {
@@ -24,13 +25,22 @@ export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) 
     check();
     const interval = setInterval(check, 2500);
 
-    const unlistenPromise = listen<{ active: boolean }>("buddy://watch-mode-state", (event) => {
+    const unlistenWatchPromise = listen<{ active: boolean }>("buddy://watch-mode-state", (event) => {
       setWatchModeActive(event.payload.active);
+    });
+
+    const unlistenLearnPromise = listen<{ active: boolean; name?: string }>("buddy://learn-mode-state", (event) => {
+      if (event.payload.active) {
+        setLearnSessionName(event.payload.name || "Workflow");
+      } else {
+        setLearnSessionName(null);
+      }
     });
 
     return () => {
       clearInterval(interval);
-      unlistenPromise.then((unlisten) => unlisten());
+      unlistenWatchPromise.then((unlisten) => unlisten());
+      unlistenLearnPromise.then((unlisten) => unlisten());
     };
   }, []);
 
@@ -63,6 +73,15 @@ export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) 
             title="Watch Mode Active (Observing screen)"
           >
             <span className="animate-pulse text-[10px]">👁️</span> WATCHING
+          </span>
+        )}
+        {learnSessionName && (
+          <span
+            className="bg-red-950/90 border border-red-500/80 text-red-300 text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5 shadow-sm shadow-red-500/30 animate-pulse"
+            title="Learn Mode: ALIEN is observing and recording your workflow steps"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+            <span>LEARNING: {learnSessionName}</span>
           </span>
         )}
         {killSwitchActive && (

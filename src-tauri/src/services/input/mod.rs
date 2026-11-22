@@ -9,11 +9,23 @@ pub mod hook;
 pub mod injector;
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::RwLock;
 use tauri::{AppHandle, Emitter, Manager};
 
 static IS_AGENT_ACTIVE: AtomicBool = AtomicBool::new(false);
 static IS_TAKEOVER_TRIGGERED: AtomicBool = AtomicBool::new(false);
 static IS_KILL_SWITCH_ACTIVE: AtomicBool = AtomicBool::new(false);
+static GLOBAL_APP_HANDLE: RwLock<Option<AppHandle>> = RwLock::new(None);
+
+pub fn set_global_app_handle(app: AppHandle) {
+    if let Ok(mut g) = GLOBAL_APP_HANDLE.write() {
+        *g = Some(app);
+    }
+}
+
+pub fn get_global_app_handle() -> Option<AppHandle> {
+    GLOBAL_APP_HANDLE.read().ok().and_then(|g| g.clone())
+}
 
 /// Mark whether ALIEN is actively controlling mouse/keyboard.
 pub fn set_agent_active(active: bool) {

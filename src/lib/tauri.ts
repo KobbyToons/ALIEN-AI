@@ -336,6 +336,21 @@ export async function describeScreen(prompt?: string): Promise<string> {
   return invoke<string>("describe_screen", { prompt: prompt ?? null });
 }
 
+// ── Learn Mode: "Watch how I do this" (Phase F) ──────────────────────────────
+
+export async function startLearnMode(name: string): Promise<void> {
+  return invoke<void>("start_learn_mode", { name });
+}
+
+export async function stopLearnMode(): Promise<string> {
+  return invoke<string>("stop_learn_mode");
+}
+
+export async function getLearnModeStatus(): Promise<boolean> {
+  return invoke<boolean>("get_learn_mode_status");
+}
+
+
 
 
 

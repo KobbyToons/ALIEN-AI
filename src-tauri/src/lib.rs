@@ -111,6 +111,8 @@ pub fn run() {
             app.manage(McpRegistry::new());
             app.manage(ObsidianVault::new(app_data.clone()));
             app.manage(LearningService::new());
+            services::input::set_global_app_handle(app.handle().clone());
+            app.manage(services::learning::LearnModeService::new());
             app.manage(services::CancellationManager::new());
             app.manage(services::OverlayService::new());
             app.manage(services::input::InputService::new());
@@ -172,6 +174,9 @@ pub fn run() {
             commands::get_next_question,
             commands::answer_question,
             commands::get_thinking_profile,
+            commands::start_learn_mode,
+            commands::stop_learn_mode,
+            commands::get_learn_mode_status,
             commands::list_skills,
             commands::reload_skills,
             commands::list_monitors,
