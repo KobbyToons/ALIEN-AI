@@ -103,6 +103,7 @@ pub fn run() {
             app.manage(ObsidianVault::new(app_data.clone()));
             app.manage(LearningService::new());
             app.manage(services::CancellationManager::new());
+            app.manage(services::OverlayService::new());
 
             let skill_loader = SkillLoader::new(app_data);
             let _ = skill_loader.reload();
@@ -164,6 +165,8 @@ pub fn run() {
             commands::reload_skills,
             commands::list_monitors,
             commands::capture_screen,
+            commands::toggle_agent_presence,
+            commands::get_agent_presence,
         ])
         // ── Launch ───────────────────────────────────────────────
         .run(tauri::generate_context!())

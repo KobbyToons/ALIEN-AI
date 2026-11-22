@@ -262,3 +262,14 @@ export async function captureScreen(
   });
 }
 
+// ── Visible Presence & Overlay (Phase B) ─────────────────────────────────────
+
+export async function toggleAgentPresence(active: boolean): Promise<void> {
+  return invoke<void>("toggle_agent_presence", { active });
+}
+
+export async function getAgentPresence(): Promise<boolean> {
+  return invoke<boolean>("get_agent_presence");
+}
+
+

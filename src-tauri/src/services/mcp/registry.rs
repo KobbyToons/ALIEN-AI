@@ -224,6 +224,21 @@ impl McpRegistry {
                         }
                     }),
                 },
+                // ── Phase B: Visible Presence ─────────────────────────────────
+                McpTool {
+                    name: "agent_presence_test".into(),
+                    description: "Toggle the visible Agent mode presence indicator: red edge glow on all monitors and red cursor. Pass active: true to turn on, active: false to turn off.".into(),
+                    input_schema: json!({
+                        "type": "object",
+                        "properties": {
+                            "active": {
+                                "type": "boolean",
+                                "description": "true to turn on red glow and red cursor; false to turn off"
+                            }
+                        },
+                        "required": ["active"]
+                    }),
+                },
             ],
         }
     }
@@ -383,6 +398,20 @@ impl McpRegistry {
                 .map_err(|e| format!("Task error: {e}"))
                 .and_then(|r| r)
                 .map(|b64| format!("data:image/jpeg;base64,{b64}"))
+            }
+            // ── Phase B: Visible Presence ─────────────────────────────────
+            "agent_presence_test" => {
+                let active = call.arguments.get("active")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                let overlay = app.state::<crate::services::OverlayService>();
+                overlay.set_presence(app, active).map(|_| {
+                    if active {
+                        "Agent presence activated: Red edge glow and red cursor are now ON across all monitors.".into()
+                    } else {
+                        "Agent presence deactivated: Overlays hidden and standard system cursor restored.".into()
+                    }
+                })
             }
             _ => {
                 // Check if tool is provided by any loaded custom Skill (Blender, Discord, Clip Studio, etc.)

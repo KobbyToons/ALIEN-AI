@@ -5,6 +5,7 @@ pub mod credentials;
 pub mod learning;
 pub mod mcp;
 pub mod obsidian;
+pub mod overlay;
 pub mod vision;
 
 pub use credentials::CredentialService;
@@ -18,3 +19,5 @@ pub use learning::LearningService;
 pub use mcp::McpRegistry;
 #[allow(unused_imports)]
 pub use obsidian::ObsidianVault;
+#[allow(unused_imports)]
+pub use overlay::OverlayService;
