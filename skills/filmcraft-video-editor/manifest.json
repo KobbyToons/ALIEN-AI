@@ -1,0 +1,7 @@
+{
+  "id": "filmcraft-video-editor",
+  "name": "FilmCraft Autonomous Video Editor",
+  "description": "Autonomously interprets editing scripts, analyses footage, builds timelines, renders previews, saves native .fcproj projects, and exports final video via the official FilmCraft MCP server.",
+  "version": "1.0.0",
+  "tools": []
+}

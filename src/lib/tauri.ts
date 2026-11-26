@@ -389,6 +389,64 @@ export async function restoreSystemCursors(): Promise<string> {
   return invoke<string>("restore_system_cursors");
 }
 
+// ── FilmCraft Autonomous Video Editor ───────────────────────────────────────
+
+import type { FilmCraftEditingStep, FilmCraftStatus } from "../types";
+
+export async function filmcraftDetectCli(): Promise<string | null> {
+  return invoke<string | null>("filmcraft_detect_cli");
+}
+
+export async function filmcraftConnect(options?: {
+  cliPath?: string;
+  mode?: "headless" | "demo" | "project" | "bridge";
+  projectPath?: string;
+  bridgeAddr?: string;
+}): Promise<FilmCraftStatus> {
+  return invoke<FilmCraftStatus>("filmcraft_connect", {
+    cliPath: options?.cliPath ?? null,
+    mode: options?.mode ?? null,
+    projectPath: options?.projectPath ?? null,
+    bridgeAddr: options?.bridgeAddr ?? null,
+  });
+}
+
+export async function filmcraftDisconnect(): Promise<FilmCraftStatus> {
+  return invoke<FilmCraftStatus>("filmcraft_disconnect");
+}
+
+export async function filmcraftGetStatus(): Promise<FilmCraftStatus> {
+  return invoke<FilmCraftStatus>("filmcraft_get_status");
+}
+
+export async function filmcraftSetMode(mode: "Planning" | "Supervised" | "Autonomous"): Promise<void> {
+  return invoke<void>("filmcraft_set_mode", { mode });
+}
+
+export async function filmcraftCallTool(toolName: string, args: Record<string, unknown>): Promise<string> {
+  return invoke<string>("filmcraft_call_tool", { toolName, arguments: args });
+}
+
+export async function filmcraftGetHistory(): Promise<FilmCraftEditingStep[]> {
+  return invoke<FilmCraftEditingStep[]>("filmcraft_get_history");
+}
+
+export async function filmcraftClearHistory(): Promise<void> {
+  return invoke<void>("filmcraft_clear_history");
+}
+
+export async function filmcraftEditTask(
+  taskDescription: string,
+  footagePaths: string[] = [],
+  mode?: "Planning" | "Supervised" | "Autonomous"
+): Promise<string> {
+  return invoke<string>("filmcraft_edit_task", {
+    taskDescription,
+    footagePaths,
+    mode: mode ?? null,
+  });
+}
+
 
 
 

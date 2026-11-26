@@ -33,11 +33,21 @@ import {
   toggleKillSwitch,
   toggleSafetyBlocklist,
   updateLearningConfig,
+  filmcraftDetectCli,
+  filmcraftConnect,
+  filmcraftDisconnect,
+  filmcraftGetStatus,
+  filmcraftSetMode,
+  filmcraftGetHistory,
+  filmcraftClearHistory,
 } from "../lib/tauri";
 import type { ActiveModelConfig } from "../hooks/useChat";
 import type {
   AuditEntry,
   ComputerUseMetrics,
+  FilmCraftEditingMode,
+  FilmCraftEditingStep,
+  FilmCraftStatus,
   GoogleAccountStatus,
   LearningConfig,
   LoadedSkill,
@@ -113,8 +123,18 @@ export default function SettingsModal({
   const [autostartEnabled, setAutostartEnabled] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
-    "ai" | "computer_use" | "identity" | "skills" | "memory" | "learning" | "voice" | "general" | "audit"
+    "ai" | "computer_use" | "video_editor" | "identity" | "skills" | "memory" | "learning" | "voice" | "general" | "audit"
   >("ai");
+
+  // FilmCraft Video Editor state
+  const [fcStatus, setFcStatus] = useState<FilmCraftStatus | null>(null);
+  const [fcCliPath, setFcCliPath] = useState<string | null>(null);
+  const [fcHistory, setFcHistory] = useState<FilmCraftEditingStep[]>([]);
+  const [fcLaunchMode, setFcLaunchMode] = useState<"headless" | "demo" | "project" | "bridge">("headless");
+  const [fcProjectPath, setFcProjectPath] = useState("");
+  const [fcBridgeAddr, setFcBridgeAddr] = useState("127.0.0.1:9886");
+  const [fcConnecting, setFcConnecting] = useState(false);
+  const [fcMsg, setFcMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Vision & Computer Use state (Phase H)
   const [blocklist, setBlocklist] = useState<string[]>([]);
@@ -180,6 +200,10 @@ export default function SettingsModal({
       getComputerUseMetrics().then(setMetrics).catch(() => {});
       getAgentPresence().then(setIsOverlayActive).catch(() => {});
       getWatchModeStatus().then(setIsWatchActive).catch(() => {});
+
+      filmcraftDetectCli().then(setFcCliPath).catch(() => {});
+      filmcraftGetStatus().then(setFcStatus).catch(() => {});
+      filmcraftGetHistory().then(setFcHistory).catch(() => {});
 
       PROVIDERS.forEach(async (p) => {
         if (p.id !== "ollama" && p.id !== "lmstudio") {
@@ -427,6 +451,7 @@ export default function SettingsModal({
           [
             ["ai", "Brain"],
             ["computer_use", "Vision & PC Control"],
+            ["video_editor", "🎬 Video Editor"],
             ["identity", "Identity Manual"],
             ["skills", `Skills (${skills.length})`],
             ["memory", "Memory"],
@@ -1440,6 +1465,235 @@ export default function SettingsModal({
               </button>
             </div>
           </>
+        )}
+
+        {activeTab === "video_editor" && (
+          <div className="space-y-3">
+            {/* Header & Status */}
+            <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-neutral-200 text-xs">🎬 FilmCraft MCP Integration</div>
+                  <div className="text-[10px] text-neutral-400">
+                    Autonomous video editing powered by FilmCraft
+                  </div>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                    fcStatus?.connection === "Connected"
+                      ? "bg-emerald-950/80 text-emerald-300 border border-emerald-700"
+                      : fcStatus?.connection === "Connecting"
+                      ? "bg-amber-950/80 text-amber-300 border border-amber-700"
+                      : typeof fcStatus?.connection === "object"
+                      ? "bg-red-950/80 text-red-300 border border-red-700"
+                      : "bg-neutral-800 text-neutral-400 border border-neutral-700"
+                  }`}
+                >
+                  {typeof fcStatus?.connection === "object"
+                    ? "Error"
+                    : fcStatus?.connection || "Disconnected"}
+                </span>
+              </div>
+
+              <div className="text-[10px] font-mono text-neutral-400 bg-black/40 p-2 rounded-lg border border-neutral-800/80 break-all">
+                CLI: {fcStatus?.cli_path || fcCliPath || "Not detected"}
+              </div>
+
+              {fcStatus?.last_error && (
+                <div className="text-[10px] text-red-400 bg-red-950/40 p-2 rounded-lg border border-red-900/60">
+                  {fcStatus.last_error}
+                </div>
+              )}
+              {fcMsg && (
+                <div
+                  className={`text-[10px] p-2 rounded-lg border ${
+                    fcMsg.isError
+                      ? "text-red-300 bg-red-950/40 border-red-900/60"
+                      : "text-emerald-300 bg-emerald-950/40 border-emerald-900/60"
+                  }`}
+                >
+                  {fcMsg.text}
+                </div>
+              )}
+            </div>
+
+            {/* Operating Mode */}
+            <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2">
+              <label className="text-[10px] uppercase font-bold text-neutral-400">
+                MCP Launch Mode
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {(
+                  [
+                    ["headless", "Headless (Empty)"],
+                    ["demo", "Headless (Demo)"],
+                    ["project", "Headless (.fcproj)"],
+                    ["bridge", "Desktop Bridge"],
+                  ] as const
+                ).map(([m, label]) => (
+                  <button
+                    key={m}
+                    onClick={() => setFcLaunchMode(m)}
+                    className={`py-1.5 px-2 rounded-lg text-[10px] font-medium border transition-colors ${
+                      fcLaunchMode === m
+                        ? "bg-red-600/90 text-white border-red-500"
+                        : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-neutral-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {fcLaunchMode === "project" && (
+                <input
+                  type="text"
+                  value={fcProjectPath}
+                  onChange={(e) => setFcProjectPath(e.target.value)}
+                  placeholder="C:\path\to\project.fcproj"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-[11px] font-mono"
+                />
+              )}
+              {fcLaunchMode === "bridge" && (
+                <input
+                  type="text"
+                  value={fcBridgeAddr}
+                  onChange={(e) => setFcBridgeAddr(e.target.value)}
+                  placeholder="127.0.0.1:9886"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-[11px] font-mono"
+                />
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  disabled={fcConnecting || fcStatus?.connection === "Connected"}
+                  onClick={async () => {
+                    setFcConnecting(true);
+                    setFcMsg(null);
+                    try {
+                      const st = await filmcraftConnect({
+                        mode: fcLaunchMode,
+                        projectPath: fcLaunchMode === "project" ? fcProjectPath : undefined,
+                        bridgeAddr: fcLaunchMode === "bridge" ? fcBridgeAddr : undefined,
+                      });
+                      setFcStatus(st);
+                      setFcMsg({
+                        text: `Connected! ${st.tools_count} FilmCraft MCP tools discovered.`,
+                        isError: false,
+                      });
+                    } catch (e: any) {
+                      setFcMsg({ text: String(e), isError: true });
+                      filmcraftGetStatus().then(setFcStatus).catch(() => {});
+                    } finally {
+                      setFcConnecting(false);
+                    }
+                  }}
+                  className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-semibold text-[11px] transition-colors"
+                >
+                  {fcConnecting ? "Connecting..." : "Connect MCP"}
+                </button>
+                <button
+                  disabled={fcStatus?.connection !== "Connected"}
+                  onClick={async () => {
+                    const st = await filmcraftDisconnect();
+                    setFcStatus(st);
+                    setFcMsg({ text: "Disconnected from FilmCraft MCP.", isError: false });
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-neutral-200 font-semibold text-[11px] transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            {/* Safety Mode */}
+            <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-2">
+              <label className="text-[10px] uppercase font-bold text-neutral-400">
+                Editing Safety Mode
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(["Planning", "Supervised", "Autonomous"] as FilmCraftEditingMode[]).map((m) => (
+                  <button
+                    key={m}
+                    onClick={async () => {
+                      await filmcraftSetMode(m);
+                      const st = await filmcraftGetStatus();
+                      setFcStatus(st);
+                    }}
+                    className={`py-1.5 px-2 rounded-lg text-[10px] font-semibold border transition-colors ${
+                      fcStatus?.mode === m
+                        ? "bg-red-600 text-white border-red-500"
+                        : "bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-neutral-200"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <div className="text-[10px] text-neutral-400">
+                {fcStatus?.mode === "Planning" && "Analyse footage and plan only. Modifications blocked."}
+                {fcStatus?.mode === "Supervised" && "Execute edits with safety checks and user oversight."}
+                {fcStatus?.mode === "Autonomous" && "Full autonomous execution with checkpoints."}
+              </div>
+            </div>
+
+            {/* Project Info & History */}
+            <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-1.5 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-neutral-400">Tools Discovered</span>
+                <span className="text-neutral-200 font-mono">{fcStatus?.tools_count ?? 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-400">Steps Executed</span>
+                <span className="text-neutral-200 font-mono">{fcStatus?.steps_taken ?? 0}</span>
+              </div>
+              {fcStatus?.project_name && (
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Project</span>
+                  <span className="text-neutral-200 font-mono truncate max-w-[180px]">
+                    {fcStatus.project_name}
+                  </span>
+                </div>
+              )}
+              {fcStatus?.project_path && (
+                <div className="text-[10px] font-mono text-neutral-400 break-all">
+                  {fcStatus.project_path}
+                </div>
+              )}
+
+              {fcHistory.length > 0 && (
+                <div className="pt-2 border-t border-neutral-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-neutral-400">
+                      Tool Execution History
+                    </span>
+                    <button
+                      onClick={async () => {
+                        await filmcraftClearHistory();
+                        setFcHistory([]);
+                      }}
+                      className="text-[10px] text-red-400 hover:text-red-300"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {fcHistory.slice(-10).reverse().map((h) => (
+                      <div
+                        key={h.step}
+                        className="flex items-center justify-between text-[10px] font-mono bg-black/30 px-2 py-1 rounded"
+                      >
+                        <span className={h.success ? "text-emerald-400" : "text-red-400"}>
+                          #{h.step} {h.tool}
+                        </span>
+                        <span className="text-neutral-500">{h.success ? "OK" : "ERR"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {activeTab === "audit" && (

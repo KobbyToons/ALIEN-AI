@@ -88,6 +88,9 @@ impl AgentService {
         };
 
         let mut all_tools = mcp.get_tools().to_vec();
+        if let Some(fc) = app.try_state::<crate::services::FilmCraftService>() {
+            all_tools.extend(fc.get_mcp_tools_for_registry());
+        }
         if let Some(loader) = app.try_state::<crate::skills::SkillLoader>() {
             for s in loader.get_skills() {
                 for t in s.manifest.tools {
@@ -109,9 +112,27 @@ impl AgentService {
             cm.reset_global();
         }
 
+        let is_video_edit_task = p_lower.contains("filmcraft")
+            || p_lower.contains(".fcproj")
+            || p_lower.contains("video edit")
+            || p_lower.contains("edit video")
+            || p_lower.contains("edit my video")
+            || p_lower.contains("timeline")
+            || p_lower.contains("sequence")
+            || p_lower.contains("footage");
+
+        let filmcraft_skill_block = if is_video_edit_task {
+            format!(
+                "\n\n=== FILMCRAFT AUTONOMOUS VIDEO EDITOR SKILL ===\n{}\n",
+                include_str!("../../../assets/skills/filmcraft-video-editor.md")
+            )
+        } else {
+            String::new()
+        };
+
         let system_prompt = format!(
-            "{}\n\n{}\n{}\nAvailable Tools Schema:\n{}\n\nWhen you want to call a tool, respond ONLY with a JSON object in this exact format:\n```json\n{{\n  \"tool\": \"tool_name\",\n  \"arguments\": {{ ... }}\n}}\n```\nDo not add conversational commentary around tool calls.\nWhen you have finished the task, or if you do not need to call a tool, reply in a warm, concise, witty conversational tone to the user.",
-            system_identity, thinking_context, memory_context, tools_schema
+            "{}\n\n{}\n{}{}\nAvailable Tools Schema:\n{}\n\nWhen you want to call a tool, respond ONLY with a JSON object in this exact format:\n```json\n{{\n  \"tool\": \"tool_name\",\n  \"arguments\": {{ ... }}\n}}\n```\nDo not add conversational commentary around tool calls.\nWhen you have finished the task, or if you do not need to call a tool, reply in a warm, concise, witty conversational tone to the user.",
+            system_identity, thinking_context, memory_context, filmcraft_skill_block, tools_schema
         );
 
         let mut conversation: Vec<ChatMessageInput> = vec![

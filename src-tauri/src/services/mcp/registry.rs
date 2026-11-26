@@ -571,6 +571,42 @@ impl McpRegistry {
             "learn_finish" => {
                 crate::commands::stop_learn_mode(app.clone()).await
             }
+            name if name.starts_with("filmcraft_") => {
+                let fc_tool = &name["filmcraft_".len()..];
+                if let Some(fc) = app.try_state::<crate::services::FilmCraftService>() {
+                    match fc_tool {
+                        "connect" => {
+                            let mode = call.arguments.get("mode").and_then(|v| v.as_str()).map(|s| {
+                                match s {
+                                    "demo" => crate::services::filmcraft::types::McpLaunchMode::HeadlessDemo,
+                                    "project" => {
+                                        let p = call.arguments.get("project_path").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                        crate::services::filmcraft::types::McpLaunchMode::HeadlessProject(p)
+                                    }
+                                    "bridge" => {
+                                        let addr = call.arguments.get("bridge_addr").and_then(|v| v.as_str()).unwrap_or("127.0.0.1:9886").to_string();
+                                        crate::services::filmcraft::types::McpLaunchMode::Bridge(addr)
+                                    }
+                                    _ => crate::services::filmcraft::types::McpLaunchMode::Headless,
+                                }
+                            }).unwrap_or_default();
+                            fc.connect(&app, None, mode)
+                                .map(|st| serde_json::to_string_pretty(&st).unwrap_or_else(|_| "Connected".into()))
+                        }
+                        "disconnect" => {
+                            let st = fc.disconnect(&app);
+                            Ok(serde_json::to_string_pretty(&st).unwrap_or_else(|_| "Disconnected".into()))
+                        }
+                        "status" => {
+                            let st = fc.get_status();
+                            Ok(serde_json::to_string_pretty(&st).unwrap_or_else(|_| "Status unavailable".into()))
+                        }
+                        _ => fc.execute_tool(&app, fc_tool, &call.arguments).await,
+                    }
+                } else {
+                    Err("FilmCraftService is not initialized.".into())
+                }
+            }
             _ => {
                 // Check if tool is provided by any loaded custom Skill (Blender, Discord, Clip Studio, etc.)
                 let skill_loader = app.try_state::<crate::skills::SkillLoader>();

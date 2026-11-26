@@ -119,6 +119,7 @@ pub fn run() {
             app.manage(services::vision::WatchModeService::new());
             app.manage(services::agent::SafetyBlocklistService::new());
             app.manage(services::agent::AgentMetricsService::new());
+            app.manage(services::FilmCraftService::new());
 
             let skill_loader = SkillLoader::new(app_data);
             let _ = skill_loader.reload();
@@ -207,6 +208,15 @@ pub fn run() {
             commands::get_computer_use_metrics,
             commands::reset_computer_use_metrics,
             commands::restore_system_cursors,
+            commands::filmcraft_detect_cli,
+            commands::filmcraft_connect,
+            commands::filmcraft_disconnect,
+            commands::filmcraft_get_status,
+            commands::filmcraft_set_mode,
+            commands::filmcraft_call_tool,
+            commands::filmcraft_get_history,
+            commands::filmcraft_clear_history,
+            commands::filmcraft_edit_task,
         ])
         // ── Launch ───────────────────────────────────────────────
         .run(tauri::generate_context!())

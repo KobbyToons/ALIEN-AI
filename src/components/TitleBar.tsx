@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
-import { getKillSwitch, getWatchModeStatus } from "../lib/tauri";
+import { getKillSwitch, getWatchModeStatus, filmcraftGetStatus } from "../lib/tauri";
+import type { FilmCraftStatus } from "../types";
 
 interface TitleBarProps {
   onOpenSettings: () => void;
@@ -16,11 +17,13 @@ export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) 
   const [killSwitchActive, setKillSwitchActive] = useState(false);
   const [watchModeActive, setWatchModeActive] = useState(false);
   const [learnSessionName, setLearnSessionName] = useState<string | null>(null);
+  const [filmcraftStatus, setFilmcraftStatus] = useState<FilmCraftStatus | null>(null);
 
   useEffect(() => {
     const check = () => {
       getKillSwitch().then(setKillSwitchActive).catch(() => {});
       getWatchModeStatus().then(setWatchModeActive).catch(() => {});
+      filmcraftGetStatus().then(setFilmcraftStatus).catch(() => {});
     };
     check();
     const interval = setInterval(check, 2500);
@@ -37,10 +40,15 @@ export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) 
       }
     });
 
+    const unlistenFilmCraftPromise = listen<FilmCraftStatus>("filmcraft://status", (event) => {
+      setFilmcraftStatus(event.payload);
+    });
+
     return () => {
       clearInterval(interval);
       unlistenWatchPromise.then((unlisten) => unlisten());
       unlistenLearnPromise.then((unlisten) => unlisten());
+      unlistenFilmCraftPromise.then((unlisten) => unlisten());
     };
   }, []);
 
@@ -82,6 +90,19 @@ export default function TitleBar({ onOpenSettings, onCollapse }: TitleBarProps) 
           >
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
             <span>LEARNING: {learnSessionName}</span>
+          </span>
+        )}
+        {filmcraftStatus?.connection === "Connected" && (
+          <span
+            className="bg-purple-950/90 border border-purple-500/80 text-purple-300 text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-sm shadow-purple-500/30"
+            title={`FilmCraft MCP Connected (${filmcraftStatus.mode} mode)`}
+          >
+            <span>🎬</span>
+            <span>
+              {filmcraftStatus.current_operation
+                ? `EDITING: ${filmcraftStatus.current_operation}`
+                : `FILMCRAFT${filmcraftStatus.project_name ? `: ${filmcraftStatus.project_name}` : ""}`}
+            </span>
           </span>
         )}
         {killSwitchActive && (

@@ -187,3 +187,39 @@ export interface MonitorInfo {
   is_primary: boolean;
 }
 
+// ── FilmCraft Autonomous Video Editor ───────────────────────────────────────
+
+export type FilmCraftConnectionState =
+  | "Disconnected"
+  | "Connecting"
+  | "Connected"
+  | { Error: string };
+
+export type FilmCraftEditingMode = "Planning" | "Supervised" | "Autonomous";
+
+export type FilmCraftLaunchMode =
+  | "Headless"
+  | "HeadlessDemo"
+  | { HeadlessProject: string }
+  | { Bridge: string };
+
+export interface FilmCraftStatus {
+  connection: FilmCraftConnectionState;
+  mode: FilmCraftEditingMode;
+  launch_mode: FilmCraftLaunchMode;
+  project_path?: string | null;
+  project_name?: string | null;
+  cli_path?: string | null;
+  tools_count: number;
+  current_operation?: string | null;
+  steps_taken: number;
+  last_error?: string | null;
+}
+
+export interface FilmCraftEditingStep {
+  step: number;
+  tool: string;
+  description: string;
+  success: boolean;
+}
+

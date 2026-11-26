@@ -2,6 +2,7 @@ pub mod agent;
 pub mod ai;
 pub mod cancellation;
 pub mod credentials;
+pub mod filmcraft;
 pub mod input;
 pub mod learning;
 pub mod mcp;
@@ -14,6 +15,8 @@ pub use credentials::CredentialService;
 pub use agent::AgentService;
 #[allow(unused_imports)]
 pub use cancellation::CancellationManager;
+#[allow(unused_imports)]
+pub use filmcraft::FilmCraftService;
 #[allow(unused_imports)]
 pub use learning::LearningService;
 #[allow(unused_imports)]
