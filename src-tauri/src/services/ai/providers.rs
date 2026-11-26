@@ -356,8 +356,25 @@ impl AiProviders {
                     prompt_builder.push_str("ALIEN: ");
                 }
 
-                let prompt_arg = if prompt_builder.len() > 15000 {
-                    prompt_builder[prompt_builder.len() - 15000..].to_string()
+                let prompt_arg = if prompt_builder.len() > 28000 {
+                    // Safely truncate at a UTF-8 char boundary, preserving the beginning (system/tools) and end (latest user/tool output)
+                    let head_end = prompt_builder
+                        .char_indices()
+                        .map(|(i, _)| i)
+                        .take_while(|&i| i <= 14000)
+                        .last()
+                        .unwrap_or(0);
+                    let tail_target = prompt_builder.len().saturating_sub(13500);
+                    let tail_start = prompt_builder
+                        .char_indices()
+                        .map(|(i, _)| i)
+                        .find(|&i| i >= tail_target)
+                        .unwrap_or(prompt_builder.len());
+                    format!(
+                        "{}\n\n...[middle conversation truncated]...\n\n{}",
+                        &prompt_builder[..head_end],
+                        &prompt_builder[tail_start..]
+                    )
                 } else {
                     prompt_builder
                 };

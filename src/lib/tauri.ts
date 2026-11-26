@@ -415,6 +415,10 @@ export async function filmcraftDisconnect(): Promise<FilmCraftStatus> {
   return invoke<FilmCraftStatus>("filmcraft_disconnect");
 }
 
+export async function filmcraftLaunchDesktop(port = 9886): Promise<FilmCraftStatus> {
+  return invoke<FilmCraftStatus>("filmcraft_launch_desktop", { port });
+}
+
 export async function filmcraftGetStatus(): Promise<FilmCraftStatus> {
   return invoke<FilmCraftStatus>("filmcraft_get_status");
 }

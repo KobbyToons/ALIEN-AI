@@ -210,6 +210,7 @@ pub fn run() {
             commands::restore_system_cursors,
             commands::filmcraft_detect_cli,
             commands::filmcraft_connect,
+            commands::filmcraft_launch_desktop,
             commands::filmcraft_disconnect,
             commands::filmcraft_get_status,
             commands::filmcraft_set_mode,

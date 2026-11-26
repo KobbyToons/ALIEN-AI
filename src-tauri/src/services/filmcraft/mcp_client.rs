@@ -29,8 +29,14 @@ pub struct FilmCraftConnection {
 
 impl FilmCraftConnection {
     /// Spawn filmcraft-cli mcp and perform the MCP initialize handshake.
-    pub fn connect(cli_path: &str, launch_mode: &McpLaunchMode) -> Result<Self, String> {
+    pub fn connect(
+        cli_path: &str,
+        launch_mode: &McpLaunchMode,
+        control_token: Option<&str>,
+    ) -> Result<Self, String> {
         use std::process::{Command, Stdio};
+        #[cfg(windows)]
+        use std::os::windows::process::CommandExt;
 
         let mut cmd = Command::new(cli_path);
         cmd.arg("mcp");
@@ -39,8 +45,16 @@ impl FilmCraftConnection {
             McpLaunchMode::Headless => {}
             McpLaunchMode::HeadlessDemo => { cmd.arg("--demo"); }
             McpLaunchMode::HeadlessProject(p) => { cmd.args(["--project", p]); }
-            McpLaunchMode::Bridge(addr) => { cmd.args(["--bridge", addr]); }
+            McpLaunchMode::Bridge(addr) => {
+                cmd.args(["--bridge", addr]);
+                if let Some(tok) = control_token {
+                    cmd.env("FILMCRAFT_CONTROL_TOKEN", tok);
+                }
+            }
         }
+
+        #[cfg(windows)]
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -238,7 +252,7 @@ mod tests {
         let cli_str = cli_path.to_string_lossy().to_string();
 
         // 1. Connect in HeadlessDemo mode & verify initialize + tools/list
-        let mut conn = FilmCraftConnection::connect(&cli_str, &McpLaunchMode::HeadlessDemo)
+        let mut conn = FilmCraftConnection::connect(&cli_str, &McpLaunchMode::HeadlessDemo, None)
             .expect("Failed to connect to FilmCraft MCP server");
 
         assert!(conn.is_alive(), "filmcraft-cli process should be alive");

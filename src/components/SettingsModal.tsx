@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import {
   addSafetyBlocklistKeyword,
@@ -35,6 +36,7 @@ import {
   updateLearningConfig,
   filmcraftDetectCli,
   filmcraftConnect,
+  filmcraftLaunchDesktop,
   filmcraftDisconnect,
   filmcraftGetStatus,
   filmcraftSetMode,
@@ -204,6 +206,14 @@ export default function SettingsModal({
       filmcraftDetectCli().then(setFcCliPath).catch(() => {});
       filmcraftGetStatus().then(setFcStatus).catch(() => {});
       filmcraftGetHistory().then(setFcHistory).catch(() => {});
+
+      const unlistenFc = listen<FilmCraftStatus>("filmcraft://status", (event) => {
+        setFcStatus(event.payload);
+        filmcraftGetHistory().then(setFcHistory).catch(() => {});
+      });
+      return () => {
+        unlistenFc.then((u) => u());
+      };
 
       PROVIDERS.forEach(async (p) => {
         if (p.id !== "ollama" && p.id !== "lmstudio") {
@@ -446,7 +456,7 @@ export default function SettingsModal({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1.5 my-2.5 text-[11px] overflow-x-auto pb-1 chat-scroll">
+      <div className="flex flex-wrap gap-1.5 my-2.5 text-[11px] pb-1">
         {(
           [
             ["ai", "Brain"],
@@ -1546,22 +1556,62 @@ export default function SettingsModal({
               </div>
 
               {fcLaunchMode === "project" && (
-                <input
-                  type="text"
-                  value={fcProjectPath}
-                  onChange={(e) => setFcProjectPath(e.target.value)}
-                  placeholder="C:\path\to\project.fcproj"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-[11px] font-mono"
-                />
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={fcProjectPath}
+                    onChange={(e) => setFcProjectPath(e.target.value)}
+                    placeholder="C:\path\to\project.fcproj"
+                    className="flex-1 px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-[11px] font-mono"
+                  />
+                  <button
+                    onClick={async () => {
+                      const picked = await openDialog({
+                        multiple: false,
+                        filters: [{ name: "FilmCraft Project", extensions: ["fcproj"] }],
+                      });
+                      if (typeof picked === "string") setFcProjectPath(picked);
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px]"
+                  >
+                    Browse
+                  </button>
+                </div>
               )}
               {fcLaunchMode === "bridge" && (
-                <input
-                  type="text"
-                  value={fcBridgeAddr}
-                  onChange={(e) => setFcBridgeAddr(e.target.value)}
-                  placeholder="127.0.0.1:9886"
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-[11px] font-mono"
-                />
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    value={fcBridgeAddr}
+                    onChange={(e) => setFcBridgeAddr(e.target.value)}
+                    placeholder="127.0.0.1:9886"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-950 border border-neutral-800 text-neutral-200 text-[11px] font-mono"
+                  />
+                  <button
+                    disabled={fcConnecting || fcStatus?.connection === "Connected"}
+                    onClick={async () => {
+                      setFcConnecting(true);
+                      setFcMsg(null);
+                      try {
+                        const port = parseInt(fcBridgeAddr.split(":")[1] || "9886", 10) || 9886;
+                        const st = await filmcraftLaunchDesktop(port);
+                        setFcStatus(st);
+                        setFcMsg({
+                          text: `FilmCraft Desktop launched & Bridge connected! (${st.tools_count} tools)`,
+                          isError: false,
+                        });
+                      } catch (e: any) {
+                        setFcMsg({ text: String(e), isError: true });
+                        filmcraftGetStatus().then(setFcStatus).catch(() => {});
+                      } finally {
+                        setFcConnecting(false);
+                      }
+                    }}
+                    className="w-full py-1.5 rounded-lg bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white font-semibold text-[11px] transition-colors"
+                  >
+                    Launch FilmCraft Desktop & Connect Bridge
+                  </button>
+                </div>
               )}
 
               <div className="flex gap-2 pt-1">

@@ -38,6 +38,16 @@ pub async fn filmcraft_connect(
     fc.connect(&app, cli_path, launch_mode)
 }
 
+/// Launch FilmCraft Desktop with a secure localhost control token and connect Bridge MCP.
+#[command]
+pub async fn filmcraft_launch_desktop(
+    app: AppHandle,
+    fc: State<'_, FilmCraftService>,
+    port: Option<u16>,
+) -> Result<FilmCraftStatus, String> {
+    fc.launch_desktop_and_connect(&app, port.unwrap_or(9886))
+}
+
 /// Disconnect from FilmCraft MCP.
 #[command]
 pub async fn filmcraft_disconnect(

@@ -39,23 +39,33 @@ impl AgentService {
         let vault = app.state::<ObsidianVault>();
         let learning = app.state::<LearningService>();
 
-        // Detect Computer Use / GUI autonomous agent tasks
         let p_lower = user_prompt.to_lowercase();
-        let is_gui_task = p_lower.contains("open notepad")
-            || p_lower.contains("open chrome")
-            || p_lower.contains("open paint")
-            || p_lower.contains("draw in paint")
-            || p_lower.contains("type into")
-            || p_lower.contains("type in notepad")
-            || p_lower.contains("shopping list")
-            || p_lower.contains("computer use")
-            || p_lower.contains("agent mode")
-            || p_lower.contains("clip studio")
-            || p_lower.contains("photoshop")
-            || p_lower.contains("blender")
-            || p_lower.contains("unreal")
-            || (p_lower.contains("open") && (p_lower.contains("app") || p_lower.contains("browser") || p_lower.contains("search for")))
-            || (p_lower.contains("click") && (p_lower.contains("screen") || p_lower.contains("button")));
+        let is_video_edit_task = p_lower.contains("filmcraft")
+            || p_lower.contains(".fcproj")
+            || p_lower.contains("video edit")
+            || p_lower.contains("edit video")
+            || p_lower.contains("edit my video")
+            || p_lower.contains("timeline")
+            || p_lower.contains("sequence")
+            || p_lower.contains("footage");
+
+        // Detect Computer Use / GUI autonomous agent tasks (never hijack FilmCraft MCP video tasks)
+        let is_gui_task = !is_video_edit_task
+            && (p_lower.contains("open notepad")
+                || p_lower.contains("open chrome")
+                || p_lower.contains("open paint")
+                || p_lower.contains("draw in paint")
+                || p_lower.contains("type into")
+                || p_lower.contains("type in notepad")
+                || p_lower.contains("shopping list")
+                || p_lower.contains("computer use")
+                || p_lower.contains("agent mode")
+                || p_lower.contains("clip studio")
+                || p_lower.contains("photoshop")
+                || p_lower.contains("blender")
+                || p_lower.contains("unreal")
+                || (p_lower.contains("open") && (p_lower.contains("app") || p_lower.contains("browser") || p_lower.contains("search for")))
+                || (p_lower.contains("click") && (p_lower.contains("screen") || p_lower.contains("button"))));
 
         if is_gui_task {
             return ComputerUseEngine::run_agent_loop(
@@ -112,22 +122,20 @@ impl AgentService {
             cm.reset_global();
         }
 
-        let is_video_edit_task = p_lower.contains("filmcraft")
-            || p_lower.contains(".fcproj")
-            || p_lower.contains("video edit")
-            || p_lower.contains("edit video")
-            || p_lower.contains("edit my video")
-            || p_lower.contains("timeline")
-            || p_lower.contains("sequence")
-            || p_lower.contains("footage");
-
         let filmcraft_skill_block = if is_video_edit_task {
-            format!(
-                "\n\n=== FILMCRAFT AUTONOMOUS VIDEO EDITOR SKILL ===\n{}\n",
-                include_str!("../../../assets/skills/filmcraft-video-editor.md")
-            )
+            "\n\n=== FILMCRAFT AUTONOMOUS VIDEO EDITOR SKILL ===\n\
+            You are a professional autonomous video editor using FilmCraft MCP (`filmcraft_*` tools).\n\
+            Workflow:\n\
+            1. If not connected, call `filmcraft_connect` first (default headless, or bridge if desktop is running).\n\
+            2. Inspect project/bins/sequence with `filmcraft_doc_inspect`.\n\
+            3. Import supplied media with `filmcraft_media_import` (never overwrite or delete original source footage).\n\
+            4. Discover exact engine commands with `filmcraft_command_list` before calling `filmcraft_command_run` or `filmcraft_command_batch`.\n\
+            5. Construct timeline cleanly (storytelling continuity, pacing, synced audio, subtle transitions/titles).\n\
+            6. Inspect timeline (`filmcraft_sequence_inspect`) & render preview (`filmcraft_render_frame`).\n\
+            7. Save native `.fcproj` (`file.save` / `file.saveAs`) so the user can reopen and edit manually in FilmCraft.\n\
+            8. Export final video (`export.render`) only when authorized. Report project & export paths clearly.\n"
         } else {
-            String::new()
+            ""
         };
 
         let system_prompt = format!(

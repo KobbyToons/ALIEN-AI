@@ -30,6 +30,7 @@ struct FilmCraftInner {
     connection: Option<FilmCraftConnection>,
     state: FilmCraftStatus,
     history: Vec<EditingStep>,
+    control_token: Option<String>,
 }
 
 impl FilmCraftService {
@@ -39,8 +40,61 @@ impl FilmCraftService {
                 connection: None,
                 state: FilmCraftStatus::default(),
                 history: Vec::new(),
+                control_token: None,
             }),
         }
+    }
+
+    /// Find filmcraft.exe (desktop GUI) in the same locations as filmcraft-cli.exe.
+    pub fn find_desktop_exe() -> Option<PathBuf> {
+        if let Some(cli) = Self::find_cli() {
+            if let Some(parent) = cli.parent() {
+                let desktop = parent.join("filmcraft.exe");
+                if desktop.exists() {
+                    return Some(desktop);
+                }
+            }
+        }
+        None
+    }
+
+    /// Launch FilmCraft Desktop with `--control <port>` and a fresh 64-char hex token
+    /// kept strictly in memory (never logged or sent to frontend), then connect Bridge MCP.
+    pub fn launch_desktop_and_connect(
+        &self,
+        app: &AppHandle,
+        port: u16,
+    ) -> Result<FilmCraftStatus, String> {
+        let desktop_exe = Self::find_desktop_exe().ok_or_else(|| {
+            "filmcraft.exe not found alongside filmcraft-cli.exe.".to_string()
+        })?;
+
+        // Generate 64 hex chars (two UUIDv4s = 32 bytes = 64 hex chars)
+        let token = format!(
+            "{}{}",
+            uuid::Uuid::new_v4().simple(),
+            uuid::Uuid::new_v4().simple()
+        );
+
+        std::process::Command::new(&desktop_exe)
+            .args(["--control", &port.to_string()])
+            .env("FILMCRAFT_CONTROL_TOKEN", &token)
+            .spawn()
+            .map_err(|e| format!("Failed to launch filmcraft.exe: {e}"))?;
+
+        {
+            let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+            inner.control_token = Some(token);
+        }
+
+        // Wait briefly for the desktop control listener to bind
+        std::thread::sleep(std::time::Duration::from_millis(1200));
+
+        self.connect(
+            app,
+            None,
+            McpLaunchMode::Bridge(format!("127.0.0.1:{port}")),
+        )
     }
 
     // ─── CLI discovery ───────────────────────────────────────────────────────
@@ -131,7 +185,8 @@ impl FilmCraftService {
         inner.state.cli_path = Some(cli_str.clone());
 
         // Launch MCP process and handshake
-        match FilmCraftConnection::connect(&cli_str, &launch_mode) {
+        let token = inner.control_token.clone();
+        match FilmCraftConnection::connect(&cli_str, &launch_mode, token.as_deref()) {
             Ok(conn) => {
                 inner.state.tools_count = conn.tools.len();
                 inner.state.connection = FilmCraftConnectionState::Connected;
